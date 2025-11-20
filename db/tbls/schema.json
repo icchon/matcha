@@ -1,0 +1,1464 @@
+{
+  "name": "matcha",
+  "tables": [
+    {
+      "name": "public.users",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "last_connection",
+          "type": "timestamp with time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "users_pkey",
+          "def": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)",
+          "table": "public.users",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "users_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.users",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.user_data",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "latitude",
+          "type": "numeric(10,8)",
+          "nullable": true
+        },
+        {
+          "name": "longitude",
+          "type": "numeric(11,8)",
+          "nullable": true
+        },
+        {
+          "name": "internal_score",
+          "type": "integer",
+          "nullable": true,
+          "default": "0"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "user_data_pkey",
+          "def": "CREATE UNIQUE INDEX user_data_pkey ON public.user_data USING btree (user_id)",
+          "table": "public.user_data",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "idx_user_data_location",
+          "def": "CREATE INDEX idx_user_data_location ON public.user_data USING btree (latitude, longitude)",
+          "table": "public.user_data",
+          "columns": [
+            "latitude",
+            "longitude"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "user_data_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.user_data",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_data_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (user_id)",
+          "table": "public.user_data",
+          "referenced_table": "",
+          "columns": [
+            "user_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.auths",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "provider",
+          "type": "auth_provider_enum",
+          "nullable": false
+        },
+        {
+          "name": "provider_uid",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "password_hash",
+          "type": "varchar(255)",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auths_pkey",
+          "def": "CREATE UNIQUE INDEX auths_pkey ON public.auths USING btree (provider, provider_uid)",
+          "table": "public.auths",
+          "columns": [
+            "provider",
+            "provider_uid"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "auths_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.auths",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "auths_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (provider, provider_uid)",
+          "table": "public.auths",
+          "referenced_table": "",
+          "columns": [
+            "provider",
+            "provider_uid"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.verification_tokens",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "token",
+          "type": "varchar(64)",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "verification_tokens_pkey",
+          "def": "CREATE UNIQUE INDEX verification_tokens_pkey ON public.verification_tokens USING btree (token)",
+          "table": "public.verification_tokens",
+          "columns": [
+            "token"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "verification_tokens_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.verification_tokens",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "verification_tokens_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (token)",
+          "table": "public.verification_tokens",
+          "referenced_table": "",
+          "columns": [
+            "token"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.password_resets",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "token",
+          "type": "varchar(64)",
+          "nullable": false
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "password_resets_pkey",
+          "def": "CREATE UNIQUE INDEX password_resets_pkey ON public.password_resets USING btree (user_id)",
+          "table": "public.password_resets",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "password_resets_token_key",
+          "def": "CREATE UNIQUE INDEX password_resets_token_key ON public.password_resets USING btree (token)",
+          "table": "public.password_resets",
+          "columns": [
+            "token"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "password_resets_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.password_resets",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "password_resets_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (user_id)",
+          "table": "public.password_resets",
+          "referenced_table": "",
+          "columns": [
+            "user_id"
+          ]
+        },
+        {
+          "name": "password_resets_token_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (token)",
+          "table": "public.password_resets",
+          "referenced_table": "",
+          "columns": [
+            "token"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.user_profiles",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "first_name",
+          "type": "varchar(50)",
+          "nullable": true
+        },
+        {
+          "name": "last_name",
+          "type": "varchar(50)",
+          "nullable": true
+        },
+        {
+          "name": "username",
+          "type": "varchar(50)",
+          "nullable": true
+        },
+        {
+          "name": "gender",
+          "type": "gender_enum",
+          "nullable": true
+        },
+        {
+          "name": "sexual_preference",
+          "type": "preference_enum",
+          "nullable": true
+        },
+        {
+          "name": "biography",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "fame_rating",
+          "type": "integer",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "name": "location_name",
+          "type": "varchar(255)",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "user_profiles_pkey",
+          "def": "CREATE UNIQUE INDEX user_profiles_pkey ON public.user_profiles USING btree (user_id)",
+          "table": "public.user_profiles",
+          "columns": [
+            "user_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "user_profiles_fame_rating_check",
+          "type": "CHECK",
+          "def": "CHECK ((fame_rating \u003e= 0))",
+          "table": "public.user_profiles",
+          "referenced_table": "",
+          "columns": [
+            "fame_rating"
+          ]
+        },
+        {
+          "name": "user_profiles_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.user_profiles",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_profiles_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (user_id)",
+          "table": "public.user_profiles",
+          "referenced_table": "",
+          "columns": [
+            "user_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.tags",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('tags_id_seq'::regclass)"
+        },
+        {
+          "name": "name",
+          "type": "varchar(50)",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "tags_pkey",
+          "def": "CREATE UNIQUE INDEX tags_pkey ON public.tags USING btree (id)",
+          "table": "public.tags",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "tags_name_key",
+          "def": "CREATE UNIQUE INDEX tags_name_key ON public.tags USING btree (name)",
+          "table": "public.tags",
+          "columns": [
+            "name"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "tags_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.tags",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "tags_name_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (name)",
+          "table": "public.tags",
+          "referenced_table": "",
+          "columns": [
+            "name"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.user_tags",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "tag_id",
+          "type": "integer",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "user_tags_pkey",
+          "def": "CREATE UNIQUE INDEX user_tags_pkey ON public.user_tags USING btree (user_id, tag_id)",
+          "table": "public.user_tags",
+          "columns": [
+            "user_id",
+            "tag_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "user_tags_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.user_tags",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_tags_tag_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE",
+          "table": "public.user_tags",
+          "referenced_table": "tags",
+          "columns": [
+            "tag_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "user_tags_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (user_id, tag_id)",
+          "table": "public.user_tags",
+          "referenced_table": "",
+          "columns": [
+            "user_id",
+            "tag_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.pictures",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('pictures_id_seq'::regclass)"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "url",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "is_profile_pic",
+          "type": "boolean",
+          "nullable": true,
+          "default": "false"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pictures_pkey",
+          "def": "CREATE UNIQUE INDEX pictures_pkey ON public.pictures USING btree (id)",
+          "table": "public.pictures",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "pictures_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.pictures",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "pictures_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.pictures",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.likes",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "liker_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "liked_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "likes_pkey",
+          "def": "CREATE UNIQUE INDEX likes_pkey ON public.likes USING btree (liker_id, liked_id)",
+          "table": "public.likes",
+          "columns": [
+            "liker_id",
+            "liked_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "likes_check",
+          "type": "CHECK",
+          "def": "CHECK ((liker_id \u003c\u003e liked_id))",
+          "table": "public.likes",
+          "referenced_table": "",
+          "columns": [
+            "liker_id",
+            "liked_id"
+          ]
+        },
+        {
+          "name": "likes_liked_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (liked_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.likes",
+          "referenced_table": "users",
+          "columns": [
+            "liked_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "likes_liker_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (liker_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.likes",
+          "referenced_table": "users",
+          "columns": [
+            "liker_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "likes_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (liker_id, liked_id)",
+          "table": "public.likes",
+          "referenced_table": "",
+          "columns": [
+            "liker_id",
+            "liked_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.connections",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "user1_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user2_id",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "connections_pkey",
+          "def": "CREATE UNIQUE INDEX connections_pkey ON public.connections USING btree (user1_id, user2_id)",
+          "table": "public.connections",
+          "columns": [
+            "user1_id",
+            "user2_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "connections_check",
+          "type": "CHECK",
+          "def": "CHECK ((user1_id \u003c user2_id))",
+          "table": "public.connections",
+          "referenced_table": "",
+          "columns": [
+            "user1_id",
+            "user2_id"
+          ]
+        },
+        {
+          "name": "connections_user1_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.connections",
+          "referenced_table": "users",
+          "columns": [
+            "user1_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "connections_user2_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.connections",
+          "referenced_table": "users",
+          "columns": [
+            "user2_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "connections_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (user1_id, user2_id)",
+          "table": "public.connections",
+          "referenced_table": "",
+          "columns": [
+            "user1_id",
+            "user2_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.views",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "viewer_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "viewed_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "view_time",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "views_pkey",
+          "def": "CREATE UNIQUE INDEX views_pkey ON public.views USING btree (viewer_id, viewed_id, view_time)",
+          "table": "public.views",
+          "columns": [
+            "viewer_id",
+            "viewed_id",
+            "view_time"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "views_viewed_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (viewed_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.views",
+          "referenced_table": "users",
+          "columns": [
+            "viewed_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "views_viewer_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (viewer_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.views",
+          "referenced_table": "users",
+          "columns": [
+            "viewer_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "views_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (viewer_id, viewed_id, view_time)",
+          "table": "public.views",
+          "referenced_table": "",
+          "columns": [
+            "viewer_id",
+            "viewed_id",
+            "view_time"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.blocks",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "blocker_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "blocked_id",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "blocks_pkey",
+          "def": "CREATE UNIQUE INDEX blocks_pkey ON public.blocks USING btree (blocker_id, blocked_id)",
+          "table": "public.blocks",
+          "columns": [
+            "blocker_id",
+            "blocked_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "blocks_check",
+          "type": "CHECK",
+          "def": "CHECK ((blocker_id \u003c\u003e blocked_id))",
+          "table": "public.blocks",
+          "referenced_table": "",
+          "columns": [
+            "blocker_id",
+            "blocked_id"
+          ]
+        },
+        {
+          "name": "blocks_blocked_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.blocks",
+          "referenced_table": "users",
+          "columns": [
+            "blocked_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "blocks_blocker_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.blocks",
+          "referenced_table": "users",
+          "columns": [
+            "blocker_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "blocks_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (blocker_id, blocked_id)",
+          "table": "public.blocks",
+          "referenced_table": "",
+          "columns": [
+            "blocker_id",
+            "blocked_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.notifications",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('notifications_id_seq'::regclass)"
+        },
+        {
+          "name": "recipient_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "sender_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "type",
+          "type": "notification_type_enum",
+          "nullable": false
+        },
+        {
+          "name": "is_read",
+          "type": "boolean",
+          "nullable": true,
+          "default": "false"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "notifications_pkey",
+          "def": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)",
+          "table": "public.notifications",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "notifications_recipient_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.notifications",
+          "referenced_table": "users",
+          "columns": [
+            "recipient_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "notifications_sender_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL",
+          "table": "public.notifications",
+          "referenced_table": "users",
+          "columns": [
+            "sender_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "notifications_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.notifications",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.messages",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('messages_id_seq'::regclass)"
+        },
+        {
+          "name": "sender_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "recipient_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "is_read",
+          "type": "boolean",
+          "nullable": true,
+          "default": "false"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "messages_pkey",
+          "def": "CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)",
+          "table": "public.messages",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "messages_recipient_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.messages",
+          "referenced_table": "users",
+          "columns": [
+            "recipient_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "messages_sender_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.messages",
+          "referenced_table": "users",
+          "columns": [
+            "sender_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "messages_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.messages",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "public.user_data",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.auths",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.verification_tokens",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.password_resets",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.user_profiles",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.user_tags",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.user_tags",
+      "columns": [
+        "tag_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tags",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.pictures",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.likes",
+      "columns": [
+        "liked_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (liked_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.likes",
+      "columns": [
+        "liker_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (liker_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.connections",
+      "columns": [
+        "user1_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.connections",
+      "columns": [
+        "user2_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.views",
+      "columns": [
+        "viewed_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (viewed_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.views",
+      "columns": [
+        "viewer_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (viewer_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.blocks",
+      "columns": [
+        "blocked_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.blocks",
+      "columns": [
+        "blocker_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.notifications",
+      "columns": [
+        "recipient_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.notifications",
+      "columns": [
+        "sender_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.messages",
+      "columns": [
+        "recipient_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.messages",
+      "columns": [
+        "sender_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE"
+    }
+  ],
+  "functions": [
+    {
+      "name": "public.uuid_nil",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_dns",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_url",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_oid",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_x500",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v1",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v1mc",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v3",
+      "return_type": "uuid",
+      "arguments": "namespace uuid, name text",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v4",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v5",
+      "return_type": "uuid",
+      "arguments": "namespace uuid, name text",
+      "type": "FUNCTION"
+    }
+  ],
+  "enums": [
+    {
+      "name": "public.auth_provider_enum",
+      "values": [
+        "apple",
+        "facebook",
+        "github",
+        "google",
+        "local"
+      ]
+    },
+    {
+      "name": "public.gender_enum",
+      "values": [
+        "female",
+        "male",
+        "other"
+      ]
+    },
+    {
+      "name": "public.notification_type_enum",
+      "values": [
+        "like",
+        "match",
+        "message",
+        "unlike",
+        "view"
+      ]
+    },
+    {
+      "name": "public.preference_enum",
+      "values": [
+        "bisexual",
+        "heterosexual",
+        "homosexual"
+      ]
+    }
+  ],
+  "driver": {
+    "name": "postgres",
+    "database_version": "PostgreSQL 13.22 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit",
+    "meta": {
+      "current_schema": "public",
+      "search_paths": [
+        "user",
+        "public"
+      ],
+      "dict": {
+        "Functions": "Stored procedures and functions"
+      }
+    }
+  }
+}
