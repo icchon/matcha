@@ -4,20 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type viewRepository struct {
 	db DBTX
 }
 
-func NewViewRepository(db DBTX) domain.ViewRepository {
+func NewViewRepository(db DBTX) repo.ViewRepository {
 	return &viewRepository{db: db}
 }
 
-func (r *viewRepository) Save(ctx context.Context, view *domain.View) error {
+func (r *viewRepository) Save(ctx context.Context, view *entity.View) error {
 	query := `
 		INSERT INTO views (viewer_id, viewed_id, view_time)
 		VALUES (:viewer_id, :viewed_id, :view_time)
@@ -33,8 +35,8 @@ func (r *viewRepository) Delete(ctx context.Context, viewerID, viewedID uuid.UUI
 	return err
 }
 
-func (r *viewRepository) Find(ctx context.Context, viewerID, viewedID uuid.UUID) (*domain.View, error) {
-	var view domain.View
+func (r *viewRepository) Find(ctx context.Context, viewerID, viewedID uuid.UUID) (*entity.View, error) {
+	var view entity.View
 	query := "SELECT * FROM views WHERE viewer_id = $1 AND viewed_id = $2"
 	err := r.db.GetContext(ctx, &view, query, viewerID, viewedID)
 	if err != nil {
@@ -46,11 +48,32 @@ func (r *viewRepository) Find(ctx context.Context, viewerID, viewedID uuid.UUID)
 	return &view, nil
 }
 
-func (r *viewRepository) GetByViewerID(ctx context.Context, viewerID uuid.UUID) ([]domain.View, error) {
-	var views []domain.View
-	query := "SELECT * FROM views WHERE viewer_id = $1"
-	err := r.db.SelectContext(ctx, &views, query, viewerID)
-	if err != nil {
+func (r *viewRepository) Query(ctx context.Context, q *repo.ViewQuery) ([]*entity.View, error) {
+	query := "SELECT * FROM views WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.ViewerID != nil {
+		query += fmt.Sprintf(" AND viewer_id = $%d", argCount)
+		args = append(args, *q.ViewerID)
+		argCount++
+	}
+	if q.ViewedID != nil {
+		query += fmt.Sprintf(" AND viewed_id = $%d", argCount)
+		args = append(args, *q.ViewedID)
+		argCount++
+	}
+	if q.ViewTime != nil {
+		query += fmt.Sprintf(" AND view_time = $%d", argCount)
+		args = append(args, *q.ViewTime)
+		argCount++
+	}
+
+	var views []*entity.View
+	if err := r.db.SelectContext(ctx, &views, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return views, nil

@@ -2,19 +2,23 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
 	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type userTagRepository struct {
 	db DBTX
 }
 
-func NewUserTagRepository(db DBTX) domain.UserTagRepository {
+func NewUserTagRepository(db DBTX) repo.UserTagRepository {
 	return &userTagRepository{db: db}
 }
 
-func (r *userTagRepository) Save(ctx context.Context, userTag *domain.UserTag) error {
+func (r *userTagRepository) Create(ctx context.Context, userTag *entity.UserTag) error {
 	query := `
 		INSERT INTO user_tags (user_id, tag_id)
 		VALUES (:user_id, :tag_id)
@@ -30,16 +34,32 @@ func (r *userTagRepository) Delete(ctx context.Context, userID uuid.UUID, tagID 
 	return err
 }
 
-func (r *userTagRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Tag, error) {
-	var tags []domain.Tag
-	query := `
-		SELECT t.id, t.name
-		FROM tags t
-		INNER JOIN user_tags ut ON t.id = ut.tag_id
-		WHERE ut.user_id = $1
-	`
-	err := r.db.SelectContext(ctx, &tags, query, userID)
-	if err != nil {
+func (r *userTagRepository) Query(ctx context.Context, q *repo.UserTagQuery) ([]*entity.Tag, error) {
+	query := "SELECT t.id, t.name FROM tags t JOIN user_tags ut ON t.id = ut.tag_id WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.UserID != nil {
+		query += fmt.Sprintf(" AND ut.user_id = $%d", argCount)
+		args = append(args, *q.UserID)
+		argCount++
+	}
+	if q.TagID != nil {
+		query += fmt.Sprintf(" AND ut.tag_id = $%d", argCount)
+		args = append(args, *q.TagID)
+		argCount++
+	}
+	if q.TagName != nil {
+		query += fmt.Sprintf(" AND t.name = $%d", argCount)
+		args = append(args, *q.TagName)
+		argCount++
+	}
+
+	var tags []*entity.Tag
+	if err := r.db.SelectContext(ctx, &tags, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return tags, nil

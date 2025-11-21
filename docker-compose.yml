@@ -36,7 +36,7 @@ services:
     restart: always
     ports:
       - "8080:8080"
-
+      
   tbls:
     image: k1low/tbls
     container_name: tbls

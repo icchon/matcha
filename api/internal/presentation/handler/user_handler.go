@@ -1,20 +1,20 @@
 package handler
 
 import (
-	"github.com/icchon/matcha/api/internal/apperrors"
-	"github.com/icchon/matcha/api/internal/presentation/helper"
-	"github.com/icchon/matcha/api/internal/service/user"
-	"net/http"
+	// "net/http"
+
+	// "github.com/go-chi/chi/v5"
+	// "github.com/google/uuid"
+	// "github.com/icchon/matcha/api/internal/apperrors"
+	// "github.com/icchon/matcha/api/internal/presentation/helper"
+	// "github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/domain/service"
 )
 
 type UserHandler struct {
-	userService user.UserService
+	userService service.UserService
 }
 
-func NewUserHandler(userService user.UserService) *UserHandler {
+func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
-}
-
-func (h *UserHandler) FindUserHandler(w http.ResponseWriter, r *http.Request) {
-	helper.HandleError(w, apperrors.ErrNotImplemented)
 }

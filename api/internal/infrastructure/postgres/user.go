@@ -4,24 +4,36 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+
 	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type userRepository struct {
 	db DBTX
 }
 
-func NewUserRepository(db DBTX) domain.UserRepository {
+func NewUserRepository(db DBTX) repo.UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) Save(ctx context.Context, user *domain.User) error {
+func (r *userRepository) Create(ctx context.Context) (*entity.User, error) {
+	query := "INSERT INTO users (last_connection) VALUES (NULL) RETURNING *"
+	var user entity.User
+	err := r.db.GetContext(ctx, &user, query)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	query := `
-		INSERT INTO users (id, created_at, last_connection)
-		VALUES (:id, :created_at, :last_connection)
-		ON CONFLICT (id) DO UPDATE SET
+		UPDATE users SET
 			last_connection = :last_connection
+		WHERE id = :id
 	`
 	_, err := r.db.NamedExecContext(ctx, query, user)
 	return err
@@ -33,8 +45,8 @@ func (r *userRepository) Delete(ctx context.Context, userID uuid.UUID) error {
 	return err
 }
 
-func (r *userRepository) Find(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
-	var user domain.User
+func (r *userRepository) Find(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+	var user entity.User
 	query := "SELECT * FROM users WHERE id = $1"
 	err := r.db.GetContext(ctx, &user, query, userID)
 	if err != nil {
@@ -44,4 +56,25 @@ func (r *userRepository) Find(ctx context.Context, userID uuid.UUID) (*domain.Us
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepository) Query(ctx context.Context, q *repo.UserQuery) ([]*entity.User, error) {
+	query := "SELECT * FROM users WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.ID != nil {
+		query += fmt.Sprintf(" AND id = $%d", argCount)
+		args = append(args, *q.ID)
+		argCount++
+	}
+
+	var users []*entity.User
+	if err := r.db.SelectContext(ctx, &users, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return users, nil
 }

@@ -29,11 +29,16 @@ CREATE INDEX idx_user_data_location ON user_data USING btree (latitude, longitud
 CREATE TYPE auth_provider_enum AS ENUM ('local', 'google', 'facebook', 'apple', 'github');
 
 CREATE TABLE auths (
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    provider auth_provider_enum NOT NULL, 
-    provider_uid VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NULL, 
-    PRIMARY KEY (provider, provider_uid)
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider auth_provider_enum NOT NULL,
+    provider_uid VARCHAR(255),
+    email VARCHAR(255),
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    password_hash VARCHAR(255),
+    UNIQUE (user_id, provider),
+    UNIQUE (provider, provider_uid),
+    UNIQUE (provider, email)
 );
 
 -- トークン管理テーブル (FKはusersを参照)
@@ -157,3 +162,16 @@ CREATE TABLE messages (
 -- インデックスの最適化
 CREATE INDEX idx_user_data_location ON user_data USING btree (latitude, longitude);
 CREATE INDEX idx_messages_chat_history ON messages (sender_id, recipient_id, sent_at);
+
+---------------------------------------------------
+
+-- 7. リフレッシュトークン (Refresh Tokens)
+CREATE TABLE refresh_tokens (
+    token_hash VARCHAR(255) PRIMARY KEY,
+    user_id UUID NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+

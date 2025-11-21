@@ -20,6 +20,9 @@ func RespondWithError(w http.ResponseWriter, code int, message string) {
 }
 
 func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	if payload == nil {
+		payload = map[string]interface{}{}
+	}
 	response, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Could not encode response payload: %v", err)

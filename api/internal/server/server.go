@@ -3,24 +3,43 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/http"
-	"time"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/icchon/matcha/api/internal/domain/repo"
+	smtp "github.com/icchon/matcha/api/internal/infrastructure/mail"
+	"github.com/icchon/matcha/api/internal/infrastructure/oauth"
 	"github.com/icchon/matcha/api/internal/infrastructure/postgres"
 	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 	"github.com/icchon/matcha/api/internal/presentation/handler"
 	appmiddleware "github.com/icchon/matcha/api/internal/presentation/middleware"
+	"github.com/icchon/matcha/api/internal/service/auth"
+	"github.com/icchon/matcha/api/internal/service/mail"
 	"github.com/icchon/matcha/api/internal/service/user"
 )
 
 type Config struct {
-	ServerAddress string
-	JWTSigningKey string
+	ServerAddress      string
+	JWTSigningKey      string
+	HMACSecretKey      string
+	GoogleClientID     string
+	GoogleClientSecret string
+	GithubClientID     string
+	GithubClientSecret string
+	RidirectURI        string
+
+	SMTP_HOST     string
+	SMTP_PORT     string
+	SMTP_USERNAME string
+	SMTP_PASSWORD string
+	SMTP_SENDER   string
+
+	BASE_URL string
 }
 
 type Server struct {
@@ -34,9 +53,24 @@ type Server struct {
 func NewServer(db *sqlx.DB, config *Config) *Server {
 	unitOfWork := uow.NewUnitOfWork(db)
 	userRepository := postgres.NewUserRepository(db)
+	authRepository := postgres.NewAuthRepository(db)
+	refreshRepository := postgres.NewRefreshTokenRepository(db)
+	passwordResetRepository := postgres.NewPasswordResetRepository(db)
+	verificationRepository := postgres.NewVerificationTokenRepository(db)
+	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
+	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
+	port, err := strconv.Atoi(config.SMTP_PORT)
+	if err != nil {
+		return nil
+	}
+	smtpClient := smtp.NewSmtpClient(repo.MailConfig{Host: config.SMTP_HOST, Port: port, Username: config.SMTP_USERNAME, Password: config.SMTP_PASSWORD, From: config.SMTP_SENDER})
+
 	userService := user.NewUserService(unitOfWork, userRepository)
+	mailService := mail.NewApplicationMailService(smtpClient, config.BASE_URL)
+	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
 	userHandler := handler.NewUserHandler(userService)
 	sampleHander := handler.NewSampleHandler()
+	authHandler := handler.NewAuthHandler(authService)
 
 	mux := chi.NewRouter()
 
@@ -46,27 +80,45 @@ func NewServer(db *sqlx.DB, config *Config) *Server {
 		config: config,
 	}
 
-	server.setupRoutes(userHandler, sampleHander)
+	server.setupRoutes(userHandler, sampleHander, authHandler)
 
 	return server
 }
 
-func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler) {
+func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler, ah *handler.AuthHandler) {
 	s.router.Use(middleware.RequestID)
 	s.router.Use(middleware.Logger)
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.Timeout(60 * time.Second))
 
 	s.router.Route("/api/v1", func(r chi.Router) {
-		r.Route("/users", func(r chi.Router) {
+		r.Get("/sample", sh.GreetingHandler)
+
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", ah.LoginHandler)
+			r.Post("/signup", ah.SignupHandler)
 			r.Group(func(r chi.Router) {
 				r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
-
-				r.Get("/{userID}", uh.FindUserHandler)
+				r.Post("/logout", ah.LogoutHandler)
+			})
+			r.Route("/verify", func(r chi.Router) {
+				r.Post("/mail", ah.SendVerificationEmailHandler)
+				r.Get("/{token}", ah.VerifyEmailHandler)
+			})
+			r.Route("/oauth", func(r chi.Router) {
+				r.Route("/google", func(r chi.Router) {
+					r.Post("/login", ah.GoogleLoginHandler)
+				})
+				r.Route("/github", func(r chi.Router) {
+					r.Post("/login", ah.GithubLoginHandler)
+				})
+			})
+			r.Route("/password", func(r chi.Router) {
+				r.Post("/forgot", ah.PasswordResetHandler)
+				r.Post("/reset", ah.PasswordResetConfirmHandler)
 			})
 		})
 
-		s.router.Get("/sample", sh.GreetingHandler)
 	})
 
 	log.Println("Routes registered.")

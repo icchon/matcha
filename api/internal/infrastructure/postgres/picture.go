@@ -4,33 +4,50 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-
-	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"fmt"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type pictureRepository struct {
 	db DBTX
 }
 
-func NewPictureRepository(db DBTX) domain.PictureRepository {
+func NewPictureRepository(db DBTX) repo.PictureRepository {
 	return &pictureRepository{db: db}
 }
 
-func (r *pictureRepository) Save(ctx context.Context, picture *domain.Picture) error {
+func (r *pictureRepository) Create(ctx context.Context, params repo.CreatePictureParams) (*entity.Picture, error) {
 	query := `
-		INSERT INTO pictures (id, user_id, url, is_profile_pic, created_at)
-		VALUES (:id, :user_id, :url, :is_profile_pic, :created_at)
-		ON CONFLICT (id) DO UPDATE SET
+		INSERT INTO pictures (user_id, url, is_profile_pic)
+		VALUES (:user_id, :url, :is_profile_pic)
+		RETURNING *
+	`
+	var picture entity.Picture
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	err = stmt.GetContext(ctx, &picture, params)
+	if err != nil {
+		return nil, err
+	}
+	return &picture, nil
+}
+
+func (r *pictureRepository) Update(ctx context.Context, picture *entity.Picture) error {
+	query := `
+		UPDATE pictures SET
 			url = :url,
 			is_profile_pic = :is_profile_pic
+		WHERE id = :id
 	`
 	_, err := r.db.NamedExecContext(ctx, query, picture)
 	return err
 }
 
-func (r *pictureRepository) Find(ctx context.Context, pictureID int32) (*domain.Picture, error) {
-	var picture domain.Picture
+func (r *pictureRepository) Find(ctx context.Context, pictureID int32) (*entity.Picture, error) {
+	var picture entity.Picture
 	query := "SELECT * FROM pictures WHERE id = $1"
 	err := r.db.GetContext(ctx, &picture, query, pictureID)
 	if err != nil {
@@ -42,11 +59,42 @@ func (r *pictureRepository) Find(ctx context.Context, pictureID int32) (*domain.
 	return &picture, nil
 }
 
-func (r *pictureRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Picture, error) {
-	var pictures []domain.Picture
-	query := "SELECT * FROM pictures WHERE user_id = $1"
-	err := r.db.SelectContext(ctx, &pictures, query, userID)
-	if err != nil {
+func (r *pictureRepository) Query(ctx context.Context, q *repo.PictureQuery) ([]*entity.Picture, error) {
+	query := "SELECT * FROM pictures WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.ID != nil {
+		query += fmt.Sprintf(" AND id = $%d", argCount)
+		args = append(args, *q.ID)
+		argCount++
+	}
+	if q.UserID != nil {
+		query += fmt.Sprintf(" AND user_id = $%d", argCount)
+		args = append(args, *q.UserID)
+		argCount++
+	}
+	if q.URL != nil {
+		query += fmt.Sprintf(" AND url = $%d", argCount)
+		args = append(args, *q.URL)
+		argCount++
+	}
+	if q.IsProfilePic != nil {
+		query += fmt.Sprintf(" AND is_profile_pic = $%d", argCount)
+		args = append(args, *q.IsProfilePic)
+		argCount++
+	}
+	if q.CreatedAt != nil {
+		query += fmt.Sprintf(" AND created_at = $%d", argCount)
+		args = append(args, *q.CreatedAt)
+		argCount++
+	}
+
+	var pictures []*entity.Picture
+	if err := r.db.SelectContext(ctx, &pictures, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return pictures, nil
