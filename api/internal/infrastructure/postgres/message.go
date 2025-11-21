@@ -4,26 +4,43 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-
-	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"fmt"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type messageRepository struct {
 	db DBTX
 }
 
-func NewMessageRepository(db DBTX) domain.MessageRepository {
+func NewMessageRepository(db DBTX) repo.MessageRepository {
 	return &messageRepository{db: db}
 }
 
-func (r *messageRepository) Save(ctx context.Context, message *domain.Message) error {
+func (r *messageRepository) Create(ctx context.Context, params repo.CreateMessageParams) (*entity.Message, error) {
 	query := `
-		INSERT INTO messages (id, sender_id, recipient_id, content, sent_at, is_read)
-		VALUES (:id, :sender_id, :recipient_id, :content, :sent_at, :is_read)
-		ON CONFLICT (id) DO UPDATE SET
+		INSERT INTO messages (sender_id, recipient_id, content)
+		VALUES (:sender_id, :recipient_id, :content)
+		RETURNING *
+	`
+	var message entity.Message
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	err = stmt.GetContext(ctx, &message, params)
+	if err != nil {
+		return nil, err
+	}
+	return &message, nil
+}
+
+func (r *messageRepository) Update(ctx context.Context, message *entity.Message) error {
+	query := `
+		UPDATE messages SET
 			content = :content,
 			is_read = :is_read
+		WHERE id = :id
 	`
 	_, err := r.db.NamedExecContext(ctx, query, message)
 	return err
@@ -35,8 +52,8 @@ func (r *messageRepository) Delete(ctx context.Context, messageID int64) error {
 	return err
 }
 
-func (r *messageRepository) Find(ctx context.Context, messageID int64) (*domain.Message, error) {
-	var message domain.Message
+func (r *messageRepository) Find(ctx context.Context, messageID int64) (*entity.Message, error) {
+	var message entity.Message
 	query := "SELECT * FROM messages WHERE id = $1"
 	err := r.db.GetContext(ctx, &message, query, messageID)
 	if err != nil {
@@ -48,11 +65,47 @@ func (r *messageRepository) Find(ctx context.Context, messageID int64) (*domain.
 	return &message, nil
 }
 
-func (r *messageRepository) GetBySenderID(ctx context.Context, senderID uuid.UUID) ([]domain.Message, error) {
-	var messages []domain.Message
-	query := "SELECT * FROM messages WHERE sender_id = $1"
-	err := r.db.SelectContext(ctx, &messages, query, senderID)
-	if err != nil {
+func (r *messageRepository) Query(ctx context.Context, q *repo.MessageQuery) ([]*entity.Message, error) {
+	query := "SELECT * FROM messages WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.ID != nil {
+		query += fmt.Sprintf(" AND id = $%d", argCount)
+		args = append(args, *q.ID)
+		argCount++
+	}
+	if q.SenderID != nil {
+		query += fmt.Sprintf(" AND sender_id = $%d", argCount)
+		args = append(args, *q.SenderID)
+		argCount++
+	}
+	if q.RecipientID != nil {
+		query += fmt.Sprintf(" AND recipient_id = $%d", argCount)
+		args = append(args, *q.RecipientID)
+		argCount++
+	}
+	if q.Content != nil {
+		query += fmt.Sprintf(" AND content LIKE $%d", argCount)
+		args = append(args, "%"+*q.Content+"%")
+		argCount++
+	}
+	if q.SentAt != nil {
+		query += fmt.Sprintf(" AND sent_at = $%d", argCount)
+		args = append(args, *q.SentAt)
+		argCount++
+	}
+	if q.IsRead != nil {
+		query += fmt.Sprintf(" AND is_read = $%d", argCount)
+		args = append(args, *q.IsRead)
+		argCount++
+	}
+
+	var messages []*entity.Message
+	if err := r.db.SelectContext(ctx, &messages, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return messages, nil

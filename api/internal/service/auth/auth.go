@@ -1,0 +1,392 @@
+package auth
+
+import (
+	"context"
+	"database/sql"
+	"github.com/google/uuid"
+	"github.com/icchon/matcha/api/internal/apperrors"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/domain/service"
+	"github.com/icchon/matcha/api/internal/infrastructure/uow"
+	"time"
+)
+
+type authService struct {
+	uow               uow.UnitOfWork
+	authRepo          repo.AuthQueryRepository
+	userRepo          repo.UserQueryRepository
+	refreshTokenRepo  repo.RefreshTokenQueryRepository
+	passwordResetRepo repo.PasswordResetQueryRepository
+	verificationRepo  repo.VerificationTokenQueryRepository
+	hmacSecretKey     string
+	jwtSigningKey     string
+	mailService       service.MailService
+	googleClient      repo.OAuthClient
+	githubClient      repo.OAuthClient
+}
+
+var _ service.AuthService = (*authService)(nil)
+
+func NewAuthService(
+	uow uow.UnitOfWork,
+	authRepo repo.AuthQueryRepository,
+	userRepo repo.UserQueryRepository,
+	refreshTokenRepo repo.RefreshTokenQueryRepository,
+	passwordResetRepo repo.PasswordResetQueryRepository,
+	verificationRepo repo.VerificationTokenQueryRepository,
+	googleClient repo.OAuthClient,
+	githubClient repo.OAuthClient,
+	mailService service.MailService,
+	hmacSecretKey string,
+	jwtSigningKey string,
+) *authService {
+	return &authService{
+		uow:               uow,
+		authRepo:          authRepo,
+		userRepo:          userRepo,
+		refreshTokenRepo:  refreshTokenRepo,
+		hmacSecretKey:     hmacSecretKey,
+		jwtSigningKey:     jwtSigningKey,
+		mailService:       mailService,
+		verificationRepo:  verificationRepo,
+		passwordResetRepo: passwordResetRepo,
+		googleClient:      googleClient,
+		githubClient:      githubClient,
+	}
+}
+
+func (s *authService) LoginOAuth(ctx context.Context, code string, codeVerifier string, provider entity.AuthProvider) (access string, refresh string, e error) {
+	var oauthInfo *repo.OAuthInfo
+	var err error
+	switch provider {
+	case entity.ProviderGoogle:
+		oauthInfo, err = s.googleClient.ExchangeCode(ctx, code, codeVerifier)
+	case entity.ProviderGithub:
+		oauthInfo, err = s.githubClient.ExchangeCode(ctx, code, codeVerifier)
+	case entity.ProviderApple:
+		return "", "", apperrors.ErrNotImplemented
+	case entity.ProviderFacebook:
+		return "", "", apperrors.ErrNotImplemented
+	default:
+		return "", "", apperrors.ErrInternalServer
+	}
+	if err != nil {
+		return "", "", err
+	}
+
+	authes, err := s.authRepo.Query(ctx, &repo.AuthQuery{Provider: &provider, ProviderUID: &sql.NullString{String: oauthInfo.Sub, Valid: true}})
+	if err != nil {
+		return "", "", apperrors.ErrInternalServer
+	}
+	if len(authes) > 1 {
+		return "", "", apperrors.ErrInternalServer
+	}
+
+	var auth *entity.Auth
+	if len(authes) == 0 {
+		err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+			user, err := m.UserRepo().Create(ctx)
+			if err != nil {
+				return err
+			}
+			auth, err = m.AuthRepo().Create(ctx, repo.CreateAuthParams{
+				UserID:      user.ID,
+				Provider:    provider,
+				ProviderUID: sql.NullString{String: oauthInfo.Sub, Valid: true},
+				IsVerified:  true,
+			})
+			return err
+		})
+		if err != nil {
+			return "", "", err
+		}
+	} else {
+		auth = authes[0]
+	}
+	return s.IssueTokens(ctx, auth.UserID)
+}
+
+func (s *authService) ConfirmPassword(ctx context.Context, token string, password string) error {
+	passwordToken, err := s.passwordResetRepo.Find(ctx, token)
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if passwordToken == nil {
+		return apperrors.ErrUnauthorized
+	}
+	if passwordToken.ExpiresAt.Before(time.Now()) {
+		return apperrors.ErrUnauthorized
+	}
+	passwordHash, err := HashPassword(password)
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	auth, err := s.authRepo.Find(ctx, passwordToken.UserID, entity.ProviderLocal)
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if auth == nil {
+		return apperrors.ErrNotFound
+	}
+	auth.PasswordHash = sql.NullString{String: passwordHash, Valid: true}
+	return s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		if err := m.AuthRepo().Update(ctx, auth); err != nil {
+			return err
+		}
+		if err := m.PasswordResetRepo().Delete(ctx, token); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (s *authService) SendPasswordResetEmail(ctx context.Context, email string) error {
+	provider := entity.ProviderLocal
+	auth, err := s.authRepo.Query(ctx, &repo.AuthQuery{Email: &sql.NullString{String: email, Valid: true}, Provider: &provider})
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if len(auth) != 1 {
+		return apperrors.ErrNotFound
+	}
+	token := GenerateEmailToken()
+	err = s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		_, err := m.PasswordResetRepo().Create(ctx, repo.CreatePasswordResetParams{
+			UserID:    auth[0].UserID,
+			Token:     token,
+			ExpiresAt: time.Now().Add(time.Hour),
+		})
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	return s.mailService.SendPasswordResetEmail(ctx, email, token)
+}
+
+func (s *authService) VerifyEmail(ctx context.Context, token string) error {
+	verification, err := s.verificationRepo.Find(ctx, token)
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if verification == nil {
+		return apperrors.ErrUnauthorized
+	}
+	if verification.ExpiresAt.Before(time.Now()) {
+		return apperrors.ErrUnauthorized
+	}
+
+	auth, err := s.authRepo.Find(ctx, verification.UserID, entity.ProviderLocal)
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if auth == nil {
+		return apperrors.ErrNotFound
+	}
+	auth.IsVerified = true
+	return s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		if err := m.VerificationTokenRepo().Delete(ctx, token); err != nil {
+			return err
+		}
+		if err := m.AuthRepo().Update(ctx, auth); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (s *authService) SendVerificationEmail(ctx context.Context, email string, userID uuid.UUID) error {
+	emailToken, err := s.IssueEMailToken(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if err != s.mailService.SendVerificationEmail(ctx, email, "", emailToken) {
+		return err
+	}
+	return nil
+}
+
+func (s *authService) Signup(ctx context.Context, email string, password string) error {
+	if !IsValidEmailFormat(email) {
+		return apperrors.ErrInvalidInput
+	}
+	if !IsValidPasswordFormat(password) {
+		return apperrors.ErrInvalidInput
+	}
+	provider := entity.ProviderLocal
+	tokens, err := s.authRepo.Query(ctx, &repo.AuthQuery{Email: &sql.NullString{String: email, Valid: true}, Provider: &provider})
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if len(tokens) > 0 {
+		return apperrors.ErrInvalidInput
+	}
+
+	var user *entity.User
+	err = s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		user, err = m.UserRepo().Create(ctx)
+		if err != nil {
+			return apperrors.ErrInternalServer
+		}
+		passwordHash, err := HashPassword(password)
+		if err != nil {
+			return apperrors.ErrInternalServer
+		}
+		_, err = m.AuthRepo().Create(ctx, repo.CreateAuthParams{
+			UserID: user.ID,
+			Email: sql.NullString{
+				String: email,
+				Valid:  true,
+			},
+			Provider: entity.ProviderLocal,
+			PasswordHash: sql.NullString{
+				String: passwordHash,
+				Valid:  true,
+			},
+			IsVerified: false,
+		})
+		if err != nil {
+			return apperrors.ErrInternalServer
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if err := s.SendVerificationEmail(ctx, email, user.ID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *authService) IssueEMailToken(ctx context.Context, userID uuid.UUID) (string, error) {
+	token := GenerateEmailToken()
+	tokens, err := s.verificationRepo.Query(ctx, &repo.VerificationTokenQuery{UserID: &userID})
+	if err != nil {
+		return "", apperrors.ErrInternalServer
+	}
+	if len(tokens) > 1 {
+		return "", apperrors.ErrUnhandled
+	} else if len(tokens) == 1 {
+		tokens[0].ExpiresAt = time.Now().Add(time.Hour)
+		tokens[0].Token = token
+		err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+			m.VerificationTokenRepo().Update(ctx, tokens[0])
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+	} else if len(tokens) == 0 {
+		err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+			m.VerificationTokenRepo().Create(ctx, repo.CreateVerificationTokenParams{
+				UserID:    userID,
+				Token:     token,
+				ExpiresAt: time.Now().Add(time.Hour),
+			})
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+	return token, nil
+}
+
+func (s *authService) IssueTokens(ctx context.Context, userID uuid.UUID) (string, string, error) {
+	refreshToken, err := s.IssueRefreshToken(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	accesToken, err := s.IssueAccessToken(ctx, refreshToken)
+	if err != nil {
+		return "", "", err
+	}
+	return accesToken, refreshToken, nil
+}
+
+func (s *authService) Login(ctx context.Context, email, password string) (access string, refresh string, err error) {
+	provider := entity.ProviderLocal
+	auth, err := s.authRepo.Query(ctx, &repo.AuthQuery{Email: &sql.NullString{String: email, Valid: true}, Provider: &provider})
+	if err != nil {
+		return "", "", apperrors.ErrInternalServer
+	}
+	if len(auth) != 1 {
+		return "", "", apperrors.ErrNotFound
+	}
+	passwordHash, err := HashPassword(password)
+	if err != nil {
+		return "", "", apperrors.ErrInternalServer
+	}
+	if auth[0].PasswordHash.String != passwordHash {
+		return "", "", apperrors.ErrUnauthorized
+	}
+
+	return s.IssueTokens(ctx, auth[0].UserID)
+}
+
+func (s *authService) Logout(ctx context.Context, userID uuid.UUID) error {
+	refreshToken, err := s.refreshTokenRepo.Query(ctx, &repo.RefreshTokenQuery{UserID: &userID})
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if len(refreshToken) != 1 {
+		return apperrors.ErrNotFound
+	}
+	refreshToken[0].Revoked = false
+	refreshToken[0].ExpiresAt = time.Now()
+
+	user, err := s.userRepo.Find(ctx, refreshToken[0].UserID)
+	if err != nil {
+		return apperrors.ErrInternalServer
+	}
+	if user == nil {
+		return apperrors.ErrNotFound
+	}
+	user.LastConnection = sql.NullTime{
+		Time: time.Now(),
+	}
+
+	return s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		if err := m.RefreshTokenRepo().Update(ctx, refreshToken[0]); err != nil {
+			return err
+		}
+		if err := m.UserRepo().Update(ctx, user); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (s *authService) IssueAccessToken(ctx context.Context, oldRefreshToken string) (string, error) {
+	token, err := s.VerifyRefreshToken(ctx, oldRefreshToken)
+	if err != nil {
+		return "", err
+	}
+	accessToken, err := GenerateAccessToken(token.UserID, true, entity.ProviderLocal, s.jwtSigningKey)
+	if err != nil {
+		return "", apperrors.ErrInternalServer
+	}
+	return accessToken, nil
+}
+
+func (s *authService) IssueRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) {
+	refreshToken := GenerateRefreshToken()
+	refreshTokenHash := HashTokenWithHMAC(refreshToken, s.hmacSecretKey)
+	err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		_, err := m.RefreshTokenRepo().Create(ctx, repo.CreateRefreshTokenParams{
+			UserID:    userID,
+			TokenHash: refreshTokenHash,
+			ExpiresAt: time.Now().Add(24 * time.Hour),
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return "", apperrors.ErrInternalServer
+	}
+	return refreshToken, nil
+}

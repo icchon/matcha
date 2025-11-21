@@ -4,24 +4,42 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type userProfileRepository struct {
 	db DBTX
 }
 
-func NewUserProfileRepository(db DBTX) domain.UserProfileRepository {
+func NewUserProfileRepository(db DBTX) repo.UserProfileRepository {
 	return &userProfileRepository{db: db}
 }
 
-func (r *userProfileRepository) Save(ctx context.Context, userProfile *domain.UserProfile) error {
+func (r *userProfileRepository) Create(ctx context.Context, params repo.CreateUserProfileParams) (*entity.UserProfile, error) {
 	query := `
-		INSERT INTO user_profiles (user_id, first_name, last_name, username, gender, sexual_preference, biography, fame_rating, location_name)
-		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :biography, :fame_rating, :location_name)
-		ON CONFLICT (user_id) DO UPDATE SET
+		INSERT INTO user_profiles (user_id, first_name, last_name, username, gender, sexual_preference, biography, location_name)
+		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :biography, :location_name)
+		RETURNING *
+	`
+	var userProfile entity.UserProfile
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	err = stmt.GetContext(ctx, &userProfile, params)
+	if err != nil {
+		return nil, err
+	}
+	return &userProfile, nil
+}
+
+func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.UserProfile) error {
+	query := `
+		UPDATE user_profiles SET
 			first_name = :first_name,
 			last_name = :last_name,
 			username = :username,
@@ -30,13 +48,14 @@ func (r *userProfileRepository) Save(ctx context.Context, userProfile *domain.Us
 			biography = :biography,
 			fame_rating = :fame_rating,
 			location_name = :location_name
+		WHERE user_id = :user_id
 	`
 	_, err := r.db.NamedExecContext(ctx, query, userProfile)
 	return err
 }
 
-func (r *userProfileRepository) Find(ctx context.Context, userID uuid.UUID) (*domain.UserProfile, error) {
-	var userProfile domain.UserProfile
+func (r *userProfileRepository) Find(ctx context.Context, userID uuid.UUID) (*entity.UserProfile, error) {
+	var userProfile entity.UserProfile
 	query := "SELECT * FROM user_profiles WHERE user_id = $1"
 	err := r.db.GetContext(ctx, &userProfile, query, userID)
 	if err != nil {
@@ -46,6 +65,67 @@ func (r *userProfileRepository) Find(ctx context.Context, userID uuid.UUID) (*do
 		return nil, err
 	}
 	return &userProfile, nil
+}
+
+func (r *userProfileRepository) Query(ctx context.Context, q *repo.UserProfileQuery) ([]*entity.UserProfile, error) {
+	query := "SELECT * FROM user_profiles WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.UserID != nil {
+		query += fmt.Sprintf(" AND user_id = $%d", argCount)
+		args = append(args, *q.UserID)
+		argCount++
+	}
+	if q.FirstName != nil {
+		query += fmt.Sprintf(" AND first_name = $%d", argCount)
+		args = append(args, *q.FirstName)
+		argCount++
+	}
+	if q.LastName != nil {
+		query += fmt.Sprintf(" AND last_name = $%d", argCount)
+		args = append(args, *q.LastName)
+		argCount++
+	}
+	if q.Username != nil {
+		query += fmt.Sprintf(" AND username = $%d", argCount)
+		args = append(args, *q.Username)
+		argCount++
+	}
+	if q.Gender != nil {
+		query += fmt.Sprintf(" AND gender = $%d", argCount)
+		args = append(args, *q.Gender)
+		argCount++
+	}
+	if q.SexualPreference != nil {
+		query += fmt.Sprintf(" AND sexual_preference = $%d", argCount)
+		args = append(args, *q.SexualPreference)
+		argCount++
+	}
+	if q.Biography != nil {
+		query += fmt.Sprintf(" AND biography LIKE $%d", argCount)
+		args = append(args, "%"+*q.Biography+"%")
+		argCount++
+	}
+	if q.FameRating != nil {
+		query += fmt.Sprintf(" AND fame_rating = $%d", argCount)
+		args = append(args, *q.FameRating)
+		argCount++
+	}
+	if q.LocationName != nil {
+		query += fmt.Sprintf(" AND location_name = $%d", argCount)
+		args = append(args, *q.LocationName)
+		argCount++
+	}
+
+	var userProfiles []*entity.UserProfile
+	if err := r.db.SelectContext(ctx, &userProfiles, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return userProfiles, nil
 }
 
 func (r *userProfileRepository) Delete(ctx context.Context, userID uuid.UUID) error {

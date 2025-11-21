@@ -4,25 +4,42 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-
-	"github.com/google/uuid"
-	"github.com/icchon/matcha/api/internal/domain"
+	"fmt"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type notificationRepository struct {
 	db DBTX
 }
 
-func NewNotificationRepository(db DBTX) domain.NotificationRepository {
+func NewNotificationRepository(db DBTX) repo.NotificationRepository {
 	return &notificationRepository{db: db}
 }
 
-func (r *notificationRepository) Save(ctx context.Context, notification *domain.Notification) error {
+func (r *notificationRepository) Create(ctx context.Context, params repo.CreateNotificationParams) (*entity.Notification, error) {
 	query := `
-		INSERT INTO notifications (id, recipient_id, sender_id, type, is_read, created_at)
-		VALUES (:id, :recipient_id, :sender_id, :type, :is_read, :created_at)
-		ON CONFLICT (id) DO UPDATE SET
+		INSERT INTO notifications (recipient_id, sender_id, type)
+		VALUES (:recipient_id, :sender_id, :type)
+		RETURNING *
+	`
+	var notification entity.Notification
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	err = stmt.GetContext(ctx, &notification, params)
+	if err != nil {
+		return nil, err
+	}
+	return &notification, nil
+}
+
+func (r *notificationRepository) Update(ctx context.Context, notification *entity.Notification) error {
+	query := `
+		UPDATE notifications SET
 			is_read = :is_read
+		WHERE id = :id
 	`
 	_, err := r.db.NamedExecContext(ctx, query, notification)
 	return err
@@ -34,8 +51,8 @@ func (r *notificationRepository) Delete(ctx context.Context, notificationID int6
 	return err
 }
 
-func (r *notificationRepository) Find(ctx context.Context, notificationID int64) (*domain.Notification, error) {
-	var notification domain.Notification
+func (r *notificationRepository) Find(ctx context.Context, notificationID int64) (*entity.Notification, error) {
+	var notification entity.Notification
 	query := "SELECT * FROM notifications WHERE id = $1"
 	err := r.db.GetContext(ctx, &notification, query, notificationID)
 	if err != nil {
@@ -47,11 +64,47 @@ func (r *notificationRepository) Find(ctx context.Context, notificationID int64)
 	return &notification, nil
 }
 
-func (r *notificationRepository) GetByRecipientID(ctx context.Context, recipientID uuid.UUID) ([]domain.Notification, error) {
-	var notifications []domain.Notification
-	query := "SELECT * FROM notifications WHERE recipient_id = $1"
-	err := r.db.SelectContext(ctx, &notifications, query, recipientID)
-	if err != nil {
+func (r *notificationRepository) Query(ctx context.Context, q *repo.NotificationQuery) ([]*entity.Notification, error) {
+	query := "SELECT * FROM notifications WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	if q.ID != nil {
+		query += fmt.Sprintf(" AND id = $%d", argCount)
+		args = append(args, *q.ID)
+		argCount++
+	}
+	if q.RecipientID != nil {
+		query += fmt.Sprintf(" AND recipient_id = $%d", argCount)
+		args = append(args, *q.RecipientID)
+		argCount++
+	}
+	if q.SenderID != nil {
+		query += fmt.Sprintf(" AND sender_id = $%d", argCount)
+		args = append(args, *q.SenderID)
+		argCount++
+	}
+	if q.Type != nil {
+		query += fmt.Sprintf(" AND type = $%d", argCount)
+		args = append(args, *q.Type)
+		argCount++
+	}
+	if q.IsRead != nil {
+		query += fmt.Sprintf(" AND is_read = $%d", argCount)
+		args = append(args, *q.IsRead)
+		argCount++
+	}
+	if q.CreatedAt != nil {
+		query += fmt.Sprintf(" AND created_at = $%d", argCount)
+		args = append(args, *q.CreatedAt)
+		argCount++
+	}
+
+	var notifications []*entity.Notification
+	if err := r.db.SelectContext(ctx, &notifications, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return notifications, nil

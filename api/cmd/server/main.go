@@ -22,6 +22,12 @@ func checkEnv() error {
 		"SERVER_ADDRESS",
 		"DATABASE_URL",
 		"JWT_SIGNING_KEY",
+		"GOOGLE_CLIENT_ID",
+		"GOOGLE_CLIENT_SECRET",
+		"GITHUB_CLIENT_ID",
+		"GITHUB_CLIENT_SECRET",
+		"REDIRECT_URI",
+		"HMAC_SECRET_KEY",
 	}
 
 	for _, envKey := range envKeys {

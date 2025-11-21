@@ -5,13 +5,19 @@ import (
 	"net/http"
 	"strings"
 
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
+	"github.com/icchon/matcha/api/internal/domain/entity"
+	"time"
 )
 
-type contextKey string
+type ContextKey string
 
-const UserIDContextKey = contextKey("userID")
+const (
+	UserIDContextKey     ContextKey = "userID"
+	IsVerifiedContextKey ContextKey = "isVerified"
+	AuthMethodContextKey ContextKey = "authMethod"
+)
 
 func AuthMiddleware(jwtSigningKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -29,36 +35,44 @@ func AuthMiddleware(jwtSigningKey string) func(http.Handler) http.Handler {
 			}
 			tokenString := parts[1]
 
-			claims := &jwt.RegisteredClaims{} // RegisteredClaims は "sub" (subject) など標準的なクレームを含む
-			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, jwt.ErrSignatureInvalid
-				}
-				return []byte(jwtSigningKey), nil
-			})
-
+			claims, err := VerifyAccessToken(tokenString, jwtSigningKey)
 			if err != nil {
-				if err == jwt.ErrSignatureInvalid {
-					http.Error(w, "Invalid token signature", http.StatusUnauthorized)
-					return
-				}
-				http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
-				return
-			}
-			if !token.Valid {
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			userID, err := uuid.Parse(claims.Subject)
-			if err != nil {
-				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
-				return
-			}
-
-			ctx := context.WithValue(r.Context(), UserIDContextKey, userID)
-
+			ctx := context.WithValue(r.Context(), UserIDContextKey, claims.UserID)
+			ctx = context.WithValue(ctx, IsVerifiedContextKey, claims.IsVerified)
+			ctx = context.WithValue(ctx, AuthMethodContextKey, claims.AuthMethod)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func VerifyAccessToken(tokenString string, secretKey string) (*entity.AppClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &entity.AppClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Method)
+		}
+		return secretKey, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("token parsing error: %w", err)
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("token is invalid")
+	}
+
+	claims, ok := token.Claims.(*entity.AppClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims format")
+	}
+
+	if claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, fmt.Errorf("token has expired")
+	}
+
+	return claims, nil
 }
