@@ -21,12 +21,12 @@ func NewConnectionRepository(db DBTX) repo.ConnectionRepository {
 
 func (r *connectionRepository) Create(ctx context.Context, connection *entity.Connection) error {
 	query := `
-		INSERT INTO connections (user1_id, user2_id, created_at)
-		VALUES (:user1_id, :user2_id, :created_at)
+		INSERT INTO connections (user1_id, user2_id)
+		VALUES (:user1_id, :user2_id)
 		ON CONFLICT (user1_id, user2_id) DO NOTHING
+		RETURNING *
 	`
-	_, err := r.db.NamedExecContext(ctx, query, connection)
-	return err
+	return r.db.QueryRowxContext(ctx, query, connection).StructScan(connection)
 }
 
 func (r *connectionRepository) Delete(ctx context.Context, user1ID, user2ID uuid.UUID) error {

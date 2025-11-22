@@ -18,22 +18,13 @@ func NewVerificationTokenRepository(db DBTX) repo.VerificationTokenRepository {
 	return &verificationTokenRepository{db: db}
 }
 
-func (r *verificationTokenRepository) Create(ctx context.Context, params repo.CreateVerificationTokenParams) (*entity.VerificationToken, error) {
+func (r *verificationTokenRepository) Create(ctx context.Context, verificationToken *entity.VerificationToken) (error) {
 	query := `
 		INSERT INTO verification_tokens (token, user_id, expires_at)
 		VALUES (:token, :user_id, :expires_at)
 		RETURNING *
 	`
-	var token entity.VerificationToken
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &token, params)
-	if err != nil {
-		return nil, err
-	}
-	return &token, nil
+	return r.db.QueryRowxContext(ctx, query, verificationToken).StructScan(verificationToken)
 }
 
 func (r *verificationTokenRepository) Update(ctx context.Context, token *entity.VerificationToken) error {

@@ -18,22 +18,13 @@ func NewPasswordResetRepository(db DBTX) repo.PasswordResetRepository {
 	return &passwordResetRepository{db: db}
 }
 
-func (r *passwordResetRepository) Create(ctx context.Context, params repo.CreatePasswordResetParams) (*entity.PasswordReset, error) {
+func (r *passwordResetRepository) Create(ctx context.Context, passwordReset *entity.PasswordReset) (error) {
 	query := `
 		INSERT INTO password_resets (user_id, token, expires_at)
 		VALUES (:user_id, :token, :expires_at)
 		RETURNING *
 	`
-	var pr entity.PasswordReset
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &pr, params)
-	if err != nil {
-		return nil, err
-	}
-	return &pr, nil
+	return r.db.QueryRowxContext(ctx, query, passwordReset).StructScan(passwordReset)
 }
 
 func (r *passwordResetRepository) Update(ctx context.Context, passwordReset *entity.PasswordReset) error {

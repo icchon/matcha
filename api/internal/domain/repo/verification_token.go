@@ -13,19 +13,13 @@ type VerificationTokenQuery struct {
 	ExpiresAt *time.Time
 }
 
-type CreateVerificationTokenParams struct {
-	Token     string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-}
-
 type VerificationTokenQueryRepository interface {
 	Find(ctx context.Context, token string) (*entity.VerificationToken, error)
 	Query(ctx context.Context, q *VerificationTokenQuery) ([]*entity.VerificationToken, error)
 }
 
 type VerificationTokenCommandRepository interface {
-	Create(ctx context.Context, params CreateVerificationTokenParams) (*entity.VerificationToken, error)
+	Create(ctx context.Context, token *entity.VerificationToken) (error)
 	Update(ctx context.Context, token *entity.VerificationToken) error
 	Delete(ctx context.Context, token string) error
 }

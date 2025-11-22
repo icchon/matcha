@@ -20,7 +20,7 @@ CREATE TABLE user_data (
     internal_score INT DEFAULT 0
 );
 
-CREATE INDEX idx_user_data_location ON user_data USING btree (latitude, longitude);
+-- CREATE INDEX idx_user_data_location ON user_data USING btree (latitude, longitude);
 
 ---------------------------------------------------
 

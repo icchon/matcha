@@ -17,22 +17,13 @@ func NewMessageRepository(db DBTX) repo.MessageRepository {
 	return &messageRepository{db: db}
 }
 
-func (r *messageRepository) Create(ctx context.Context, params repo.CreateMessageParams) (*entity.Message, error) {
+func (r *messageRepository) Create(ctx context.Context, message *entity.Message) (error) {
 	query := `
 		INSERT INTO messages (sender_id, recipient_id, content)
 		VALUES (:sender_id, :recipient_id, :content)
 		RETURNING *
 	`
-	var message entity.Message
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &message, params)
-	if err != nil {
-		return nil, err
-	}
-	return &message, nil
+	return r.db.QueryRowxContext(ctx, query, message).StructScan(message)
 }
 
 func (r *messageRepository) Update(ctx context.Context, message *entity.Message) error {

@@ -19,14 +19,12 @@ func NewViewRepository(db DBTX) repo.ViewRepository {
 	return &viewRepository{db: db}
 }
 
-func (r *viewRepository) Save(ctx context.Context, view *entity.View) error {
+func (r *viewRepository) Create(ctx context.Context, view *entity.View) (error) {
 	query := `
 		INSERT INTO views (viewer_id, viewed_id, view_time)
 		VALUES (:viewer_id, :viewed_id, :view_time)
-		ON CONFLICT (viewer_id, viewed_id, view_time) DO NOTHING
 	`
-	_, err := r.db.NamedExecContext(ctx, query, view)
-	return err
+	return r.db.QueryRowxContext(ctx, query, view).StructScan(view)
 }
 
 func (r *viewRepository) Delete(ctx context.Context, viewerID, viewedID uuid.UUID) error {

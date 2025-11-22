@@ -19,25 +19,16 @@ func NewUserProfileRepository(db DBTX) repo.UserProfileRepository {
 	return &userProfileRepository{db: db}
 }
 
-func (r *userProfileRepository) Create(ctx context.Context, params repo.CreateUserProfileParams) (*entity.UserProfile, error) {
+func (r *userProfileRepository) Create(ctx context.Context, userProfile *entity.UserProfile) (error) {
 	query := `
 		INSERT INTO user_profiles (user_id, first_name, last_name, username, gender, sexual_preference, biography, location_name)
 		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :biography, :location_name)
 		RETURNING *
 	`
-	var userProfile entity.UserProfile
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &userProfile, params)
-	if err != nil {
-		return nil, err
-	}
-	return &userProfile, nil
+	return r.db.QueryRowxContext(ctx, query, userProfile).StructScan(userProfile)
 }
 
-func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.UserProfile) error {
+func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.UserProfile) (error) {
 	query := `
 		UPDATE user_profiles SET
 			first_name = :first_name,
@@ -49,6 +40,7 @@ func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.
 			fame_rating = :fame_rating,
 			location_name = :location_name
 		WHERE user_id = :user_id
+		RETURNING *
 	`
 	_, err := r.db.NamedExecContext(ctx, query, userProfile)
 	return err

@@ -18,24 +18,13 @@ func NewAuthRepository(db DBTX) repo.AuthRepository {
 	return &authRepository{db: db}
 }
 
-func (r *authRepository) Create(ctx context.Context, params repo.CreateAuthParams) (*entity.Auth, error) {
+func (r *authRepository) Create(ctx context.Context, auth *entity.Auth) (error) {
 	query := `
 		INSERT INTO auths (user_id, provider, provider_uid, email, is_verified, password_hash)
 		VALUES (:user_id, :provider, :provider_uid, :email, :is_verified, :password_hash)
 		RETURNING *
 	`
-	var auth entity.Auth
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	err = stmt.GetContext(ctx, &auth, params)
-	if err != nil {
-		return nil, err
-	}
-	return &auth, nil
+	return r.db.QueryRowxContext(ctx, query, auth).StructScan(auth)
 }
 
 func (r *authRepository) Update(ctx context.Context, auth *entity.Auth) error {

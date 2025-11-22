@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/mail"
 	"time"
+	"log"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -42,7 +43,7 @@ func GenerateAccessToken(userID uuid.UUID, isVerified bool, authMethod entity.Au
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	tokenString, err := token.SignedString(secretKey)
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", fmt.Errorf("error signing token: %w", err)
 	}
@@ -53,6 +54,7 @@ func (s *authService) VerifyRefreshToken(ctx context.Context, tokenString string
 	tokenHash := HashTokenWithHMAC(tokenString, s.hmacSecretKey)
 	token, err := s.refreshTokenRepo.Find(ctx, tokenHash)
 	if err != nil {
+		log.Printf("find refresh token error: %v", err)
 		return nil, apperrors.ErrInternalServer
 	}
 	if token == nil {

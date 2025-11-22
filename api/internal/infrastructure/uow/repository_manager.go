@@ -15,6 +15,10 @@ type RepositoryManager interface {
 	RefreshTokenRepo() repo.RefreshTokenRepository
 	UserTagRepo() repo.UserTagRepository
 	VerificationTokenRepo() repo.VerificationTokenRepository
+	ProfileRepo() repo.UserProfileRepository
+	ViewRepo() repo.ViewRepository
+	LikeRepo() repo.LikeRepository
+	BlockRepo() repo.BlockRepository
 }
 
 type repositoryManager struct {
@@ -28,6 +32,10 @@ type repositoryManager struct {
 	refreshTokenRepo      repo.RefreshTokenRepository
 	userTagRepo           repo.UserTagRepository
 	verificationTokenRepo repo.VerificationTokenRepository
+	profileRepo repo.UserProfileRepository
+	viewRepo repo.ViewRepository
+	likeRepo repo.LikeRepository
+	blockRepo repo.BlockRepository
 }
 
 func NewRepositoryManager(
@@ -41,6 +49,10 @@ func NewRepositoryManager(
 	refreshTokenRepo repo.RefreshTokenRepository,
 	userTagRepo repo.UserTagRepository,
 	verificationTokenRepo repo.VerificationTokenRepository,
+	profileRepo repo.UserProfileRepository,
+	viewRepo repo.ViewRepository,
+	likeRepo repo.LikeRepository,
+	blockRepo repo.BlockRepository,
 ) RepositoryManager {
 	return &repositoryManager{
 		userRepo:              userRepo,
@@ -53,7 +65,23 @@ func NewRepositoryManager(
 		refreshTokenRepo:      refreshTokenRepo,
 		userTagRepo:           userTagRepo,
 		verificationTokenRepo: verificationTokenRepo,
+		profileRepo: profileRepo,
+		viewRepo: viewRepo,
+		likeRepo: likeRepo,
+		blockRepo: blockRepo,
 	}
+}
+
+func(r *repositoryManager) BlockRepo() repo.BlockRepository {
+	return r.blockRepo
+}
+
+func(r *repositoryManager) LikeRepo() repo.LikeRepository {
+	return r.likeRepo
+}
+
+func(r *repositoryManager) ViewRepo() repo.ViewRepository {
+	return r.viewRepo
 }
 
 func (r *repositoryManager) UserRepo() repo.UserRepository {
@@ -94,4 +122,8 @@ func (r *repositoryManager) UserTagRepo() repo.UserTagRepository {
 
 func (r *repositoryManager) VerificationTokenRepo() repo.VerificationTokenRepository {
 	return r.verificationTokenRepo
+}
+
+func (r *repositoryManager) ProfileRepo() repo.UserProfileRepository{
+	return r.profileRepo
 }
