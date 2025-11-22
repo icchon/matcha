@@ -329,5 +329,13 @@ lib/generated_plugin_registrant.dart
 
 # End of https://www.toptal.com/developers/gitignore/api/flutter
 
-
-server
+filesrv/uploads/*.jpg
+filesrv/uploads/*.jpeg
+filesrv/uploads/*.png
+filesrv/uploads/*.gif
+filesrv/uploads/*.bmp
+filesrv/uploads/*.webp
+filesrv/uploads/*.svg
+filesrv/uploads/*.HEIC
+filesrv/uploads/*.heic
+file-server

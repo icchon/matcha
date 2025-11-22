@@ -35,7 +35,7 @@ services:
     image: adminer
     restart: always
     ports:
-      - "8080:8080"
+      - "8080:80"
       
   tbls:
     image: k1low/tbls
@@ -46,6 +46,18 @@ services:
       - .:/app
     environment:
       DB_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+  
+  filesrv:
+    build:
+      context: ./filesrv
+      dockerfile: Dockerfile
+    container_name: filesrv
+    ports:
+      - "3131:3131"
+    restart: always
+    env_file: ./filesrv/.env
+    volumes:
+      - ./filesrv/uploads:/static/uploads
 
 volumes:
   pgdata:
