@@ -7,7 +7,7 @@ import (
 )
 
 type UserService interface {
-	UnlikeUser(ctx context.Context, likerID, likedID uuid.UUID) (error)
+	UnlikeUser(ctx context.Context, likerID, likedID uuid.UUID) error
 	FindMyLikedList(ctx context.Context, userID uuid.UUID) ([]*entity.Like, error)
 	FindMyViewedList(ctx context.Context, userID uuid.UUID) ([]*entity.View, error)
 	FindConnections(ctx context.Context, userID uuid.UUID) ([]*entity.Connection, error)

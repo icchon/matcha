@@ -61,7 +61,7 @@ func (r *refreshTokenRepository) Query(ctx context.Context, q *repo.RefreshToken
 	return tokens, nil
 }
 
-func (r *refreshTokenRepository) Create(ctx context.Context, refreshToken *entity.RefreshToken) (error) {
+func (r *refreshTokenRepository) Create(ctx context.Context, refreshToken *entity.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (token_hash, user_id, expires_at)
 		VALUES (:token_hash, :user_id, :expires_at)

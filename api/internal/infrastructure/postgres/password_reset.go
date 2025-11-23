@@ -18,7 +18,7 @@ func NewPasswordResetRepository(db DBTX) repo.PasswordResetRepository {
 	return &passwordResetRepository{db: db}
 }
 
-func (r *passwordResetRepository) Create(ctx context.Context, passwordReset *entity.PasswordReset) (error) {
+func (r *passwordResetRepository) Create(ctx context.Context, passwordReset *entity.PasswordReset) error {
 	query := `
 		INSERT INTO password_resets (user_id, token, expires_at)
 		VALUES (:user_id, :token, :expires_at)

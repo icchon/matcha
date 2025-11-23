@@ -19,7 +19,7 @@ func NewViewRepository(db DBTX) repo.ViewRepository {
 	return &viewRepository{db: db}
 }
 
-func (r *viewRepository) Create(ctx context.Context, view *entity.View) (error) {
+func (r *viewRepository) Create(ctx context.Context, view *entity.View) error {
 	query := `
 		INSERT INTO views (viewer_id, viewed_id, view_time)
 		VALUES (:viewer_id, :viewed_id, :view_time)

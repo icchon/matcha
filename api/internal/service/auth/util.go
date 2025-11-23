@@ -6,9 +6,9 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/mail"
 	"time"
-	"log"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

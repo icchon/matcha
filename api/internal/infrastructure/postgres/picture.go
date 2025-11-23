@@ -17,7 +17,7 @@ func NewPictureRepository(db DBTX) repo.PictureRepository {
 	return &pictureRepository{db: db}
 }
 
-func (r *pictureRepository) Create(ctx context.Context, picture *entity.Picture) (error) {
+func (r *pictureRepository) Create(ctx context.Context, picture *entity.Picture) error {
 	query := `
 		INSERT INTO pictures (user_id, url, is_profile_pic)
 		VALUES (:user_id, :url, :is_profile_pic)

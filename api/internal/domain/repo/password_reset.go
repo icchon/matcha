@@ -19,7 +19,7 @@ type PasswordResetQueryRepository interface {
 }
 
 type PasswordResetCommandRepository interface {
-	Create(ctx context.Context, passwordReset *entity.PasswordReset) (error)
+	Create(ctx context.Context, passwordReset *entity.PasswordReset) error
 	Update(ctx context.Context, passwordReset *entity.PasswordReset) error
 	Delete(ctx context.Context, token string) error
 }

@@ -1,6 +1,6 @@
 package notice
 
-import(
+import (
 	// "github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	// "github.com/google/uuid"

@@ -17,7 +17,7 @@ func NewNotificationRepository(db DBTX) repo.NotificationRepository {
 	return &notificationRepository{db: db}
 }
 
-func (r *notificationRepository) Create(ctx context.Context, notification *entity.Notification) (error) {
+func (r *notificationRepository) Create(ctx context.Context, notification *entity.Notification) error {
 	query := `
 		INSERT INTO notifications (recipient_id, sender_id, type)
 		VALUES (:recipient_id, :sender_id, :type)

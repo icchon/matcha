@@ -6,7 +6,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/apperrors"
 	"github.com/icchon/matcha/api/internal/domain/entity"
@@ -14,6 +13,7 @@ import (
 	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 	"github.com/icchon/matcha/api/internal/mock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 // mockRepositoryManager is a mock for uow.RepositoryManager.
@@ -312,7 +312,7 @@ func TestProfileService_VeiwProfile(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(viewRepo)
 			}
-			
+
 			mockRM := &mockRepositoryManager{viewRepo: viewRepo}
 			mockUOW := &mockUow{rm: mockRM}
 
@@ -326,6 +326,120 @@ func TestProfileService_VeiwProfile(t *testing.T) {
 
 			err := service.VeiwProfile(context.Background(), viewerID, viewedID)
 
+			assert.Equal(t, tc.expectedErr, err)
+		})
+	}
+}
+
+func TestProfileService_FindWhoViewedMeList(t *testing.T) {
+	userID := uuid.New()
+	dbErr := errors.New("db error")
+	expectedViews := []*entity.View{
+		{ViewerID: uuid.New(), ViewedID: userID},
+	}
+
+	testCases := []struct {
+		name        string
+		setupMocks  func(viewRepo *mock.MockViewQueryRepository)
+		expected    []*entity.View
+		expectedErr error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(viewRepo *mock.MockViewQueryRepository) {
+				viewRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedViews, nil)
+			},
+			expected:    expectedViews,
+			expectedErr: nil,
+		},
+		{
+			name: "DB Error",
+			setupMocks: func(viewRepo *mock.MockViewQueryRepository) {
+				viewRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
+			},
+			expected:    nil,
+			expectedErr: dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			viewRepo := mock.NewMockViewQueryRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(viewRepo)
+			}
+
+			// Other mocks
+			profileRepo := mock.NewMockUserProfileRepository(ctrl)
+			pictureRepo := mock.NewMockPictureQueryRepository(ctrl)
+			likeRepo := mock.NewMockLikeQueryRepository(ctrl)
+			fileClient := mock.NewMockFileClient(ctrl)
+
+			service := NewProfileService(nil, profileRepo, fileClient, pictureRepo, viewRepo, likeRepo)
+
+			views, err := service.FindWhoViewedMeList(context.Background(), userID)
+
+			assert.Equal(t, tc.expected, views)
+			assert.Equal(t, tc.expectedErr, err)
+		})
+	}
+}
+
+func TestProfileService_FindWhoLikedMeList(t *testing.T) {
+	userID := uuid.New()
+	dbErr := errors.New("db error")
+	expectedLikes := []*entity.Like{
+		{LikerID: uuid.New(), LikedID: userID},
+	}
+
+	testCases := []struct {
+		name        string
+		setupMocks  func(likeRepo *mock.MockLikeQueryRepository)
+		expected    []*entity.Like
+		expectedErr error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(likeRepo *mock.MockLikeQueryRepository) {
+				likeRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedLikes, nil)
+			},
+			expected:    expectedLikes,
+			expectedErr: nil,
+		},
+		{
+			name: "DB Error",
+			setupMocks: func(likeRepo *mock.MockLikeQueryRepository) {
+				likeRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
+			},
+			expected:    nil,
+			expectedErr: dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			likeRepo := mock.NewMockLikeQueryRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(likeRepo)
+			}
+
+			// Other mocks
+			profileRepo := mock.NewMockUserProfileRepository(ctrl)
+			pictureRepo := mock.NewMockPictureQueryRepository(ctrl)
+			viewRepo := mock.NewMockViewQueryRepository(ctrl)
+			fileClient := mock.NewMockFileClient(ctrl)
+
+			service := NewProfileService(nil, profileRepo, fileClient, pictureRepo, viewRepo, likeRepo)
+
+			likes, err := service.FindWhoLikedMeList(context.Background(), userID)
+
+			assert.Equal(t, tc.expected, likes)
 			assert.Equal(t, tc.expectedErr, err)
 		})
 	}

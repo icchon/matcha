@@ -21,7 +21,7 @@ type PictureQueryRepository interface {
 }
 
 type PictureCommandRepository interface {
-	Create(ctx context.Context, picture *entity.Picture) (error)
+	Create(ctx context.Context, picture *entity.Picture) error
 	Update(ctx context.Context, picture *entity.Picture) error
 	Delete(ctx context.Context, pictureID int32) error
 }

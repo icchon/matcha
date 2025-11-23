@@ -29,8 +29,8 @@ type LoginHandlerResponse struct {
 	UserID       uuid.UUID `json:"user_id"`
 	IsVerified   bool      `json:"is_verified"`
 	AuthMethod   string    `json:"auth_method"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 // /auth/login POST
@@ -166,8 +166,8 @@ type GoogleLoginResponse struct {
 	UserID       uuid.UUID `json:"user_id"`
 	IsVerified   bool      `json:"is_verified"`
 	AuthMethod   string    `json:"auth_method"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (h *AuthHandler) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -190,11 +190,11 @@ type GithubLoginRequest struct {
 	CodeVerifier string `json:"code_verifier"`
 }
 type GithubLoginResponse struct {
-	UserID uuid.UUID `json:"user_id"`
-	IsVerified bool `json:"is_verified"`
-	AuthMethod string `json:"auth_method"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID       uuid.UUID `json:"user_id"`
+	IsVerified   bool      `json:"is_verified"`
+	AuthMethod   string    `json:"auth_method"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (h *AuthHandler) GithubLoginHandler(w http.ResponseWriter, r *http.Request) {

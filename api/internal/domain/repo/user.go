@@ -16,7 +16,7 @@ type UserQueryRepository interface {
 }
 
 type UserCommandRepository interface {
-	Create(ctx context.Context, user* entity.User) (error)
+	Create(ctx context.Context, user *entity.User) error
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, userID uuid.UUID) error
 }

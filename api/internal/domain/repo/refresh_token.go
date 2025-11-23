@@ -18,7 +18,7 @@ type RefreshTokenQueryRepository interface {
 }
 
 type RefreshTokenCommandRepository interface {
-	Create(ctx context.Context, token *entity.RefreshToken) (error)
+	Create(ctx context.Context, token *entity.RefreshToken) error
 	Update(ctx context.Context, token *entity.RefreshToken) error
 	Delete(ctx context.Context, tokenHash string) error
 }

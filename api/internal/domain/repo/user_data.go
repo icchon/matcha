@@ -19,7 +19,7 @@ type UserDataQueryRepository interface {
 }
 
 type UserDataCommandRepository interface {
-	Create(ctx context.Context, userData *entity.UserData) (error)
+	Create(ctx context.Context, userData *entity.UserData) error
 	Update(ctx context.Context, userData *entity.UserData) error
 	Delete(ctx context.Context, userID uuid.UUID) error
 }

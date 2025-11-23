@@ -19,7 +19,7 @@ func NewUserProfileRepository(db DBTX) repo.UserProfileRepository {
 	return &userProfileRepository{db: db}
 }
 
-func (r *userProfileRepository) Create(ctx context.Context, userProfile *entity.UserProfile) (error) {
+func (r *userProfileRepository) Create(ctx context.Context, userProfile *entity.UserProfile) error {
 	query := `
 		INSERT INTO user_profiles (user_id, first_name, last_name, username, gender, sexual_preference, biography, location_name)
 		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :biography, :location_name)
@@ -28,7 +28,7 @@ func (r *userProfileRepository) Create(ctx context.Context, userProfile *entity.
 	return r.db.QueryRowxContext(ctx, query, userProfile).StructScan(userProfile)
 }
 
-func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.UserProfile) (error) {
+func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.UserProfile) error {
 	query := `
 		UPDATE user_profiles SET
 			first_name = :first_name,

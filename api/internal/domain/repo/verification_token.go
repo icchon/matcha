@@ -19,7 +19,7 @@ type VerificationTokenQueryRepository interface {
 }
 
 type VerificationTokenCommandRepository interface {
-	Create(ctx context.Context, token *entity.VerificationToken) (error)
+	Create(ctx context.Context, token *entity.VerificationToken) error
 	Update(ctx context.Context, token *entity.VerificationToken) error
 	Delete(ctx context.Context, token string) error
 }

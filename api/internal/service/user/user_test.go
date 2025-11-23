@@ -5,23 +5,23 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 	"github.com/icchon/matcha/api/internal/mock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 // mockRepositoryManager is a mock for uow.RepositoryManager.
 type mockRepositoryManager struct {
 	uow.RepositoryManager // Embed interface to avoid implementing all methods
-	userRepo       repo.UserRepository
-	blockRepo      repo.BlockRepository
-	connectionRepo repo.ConnectionRepository
-	likeRepo       repo.LikeRepository
-	viewRepo       repo.ViewRepository
+	userRepo              repo.UserRepository
+	blockRepo             repo.BlockRepository
+	connectionRepo        repo.ConnectionRepository
+	likeRepo              repo.LikeRepository
+	viewRepo              repo.ViewRepository
 }
 
 func (m *mockRepositoryManager) UserRepo() repo.UserRepository {
@@ -224,11 +224,11 @@ func TestUserService_LikeUser(t *testing.T) {
 	dbErr := errors.New("db error")
 
 	testCases := []struct {
-		name              string
-		setupMocks        func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository)
-		isMatch           bool
+		name               string
+		setupMocks         func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository)
+		isMatch            bool
 		expectedConnection *entity.Connection
-		expectedErr       error
+		expectedErr        error
 	}{
 		{
 			name: "Success - First Like (No Match)",
@@ -236,9 +236,9 @@ func TestUserService_LikeUser(t *testing.T) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			isMatch:           false,
+			isMatch:            false,
 			expectedConnection: nil,
-			expectedErr:       nil,
+			expectedErr:        nil,
 		},
 		{
 			name: "Success - Second Like (Match)",
@@ -247,18 +247,18 @@ func TestUserService_LikeUser(t *testing.T) {
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 				connRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			isMatch:           true,
+			isMatch:            true,
 			expectedConnection: &entity.Connection{User1ID: likerID, User2ID: likedID},
-			expectedErr:       nil,
+			expectedErr:        nil,
 		},
 		{
 			name: "Find Fails",
 			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, dbErr)
 			},
-			isMatch:           false,
+			isMatch:            false,
 			expectedConnection: nil,
-			expectedErr:       dbErr,
+			expectedErr:        dbErr,
 		},
 		{
 			name: "Like Create Fails",
@@ -266,9 +266,9 @@ func TestUserService_LikeUser(t *testing.T) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(dbErr)
 			},
-			isMatch:           false,
+			isMatch:            false,
 			expectedConnection: nil,
-			expectedErr:       dbErr,
+			expectedErr:        dbErr,
 		},
 	}
 
@@ -283,16 +283,277 @@ func TestUserService_LikeUser(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(likeRepo, likeQueryRepo, connRepo)
 			}
-			
+
 			mockRM := &mockRepositoryManager{likeRepo: likeRepo, connectionRepo: connRepo}
 			mockUOW := &mockUow{rm: mockRM}
-			
+
 			service := &userService{uow: mockUOW, likeRepo: likeQueryRepo}
 
 			conn, err := service.LikeUser(context.Background(), likerID, likedID)
 
 			assert.Equal(t, tc.expectedErr, err)
 			assert.Equal(t, tc.expectedConnection, conn)
+		})
+	}
+}
+
+func TestUserService_FindBlockList(t *testing.T) {
+	userID := uuid.New()
+	dbErr := errors.New("db error")
+	expectedBlocks := []*entity.Block{{BlockerID: userID, BlockedID: uuid.New()}}
+
+	testCases := []struct {
+		name           string
+		setupMocks     func(blockRepo *mock.MockBlockRepository)
+		uowError       error
+		expectedBlocks []*entity.Block
+		expectedErr    error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(blockRepo *mock.MockBlockRepository) {
+				blockRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedBlocks, nil)
+			},
+			expectedBlocks: expectedBlocks,
+			expectedErr:    nil,
+		},
+		{
+			name: "Query returns error",
+			setupMocks: func(blockRepo *mock.MockBlockRepository) {
+				blockRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
+			},
+			expectedBlocks: nil,
+			expectedErr:    dbErr,
+		},
+		{
+			name:           "UOW returns error",
+			uowError:       dbErr,
+			expectedBlocks: nil,
+			expectedErr:    dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			blockRepo := mock.NewMockBlockRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(blockRepo)
+			}
+			mockRM := &mockRepositoryManager{blockRepo: blockRepo}
+			mockUOW := &mockUow{rm: mockRM, err: tc.uowError}
+
+			service := &userService{uow: mockUOW}
+			blocks, err := service.FindBlockList(context.Background(), userID)
+
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedBlocks, blocks)
+		})
+	}
+}
+
+func TestUserService_UnlikeUser(t *testing.T) {
+	likerID := uuid.New()
+	likedID := uuid.New()
+	dbErr := errors.New("db error")
+
+	testCases := []struct {
+		name        string
+		setupMocks  func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository)
+		expectedErr error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository) {
+				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
+				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "LikeRepo Delete fails",
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository) {
+				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(dbErr)
+			},
+			expectedErr: dbErr,
+		},
+		{
+			name: "ConnRepo Delete fails",
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository) {
+				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
+				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(dbErr)
+			},
+			expectedErr: dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			likeRepo := mock.NewMockLikeRepository(ctrl)
+			connRepo := mock.NewMockConnectionRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(likeRepo, connRepo)
+			}
+
+			mockRM := &mockRepositoryManager{likeRepo: likeRepo, connectionRepo: connRepo}
+			mockUOW := &mockUow{rm: mockRM}
+			service := &userService{uow: mockUOW}
+			err := service.UnlikeUser(context.Background(), likerID, likedID)
+			assert.Equal(t, tc.expectedErr, err)
+		})
+	}
+}
+
+func TestUserService_FindMyLikedList(t *testing.T) {
+	userID := uuid.New()
+	dbErr := errors.New("db error")
+	expectedLikes := []*entity.Like{{LikerID: userID}}
+
+	testCases := []struct {
+		name          string
+		setupMocks    func(likeQueryRepo *mock.MockLikeQueryRepository)
+		expectedLikes []*entity.Like
+		expectedErr   error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(likeQueryRepo *mock.MockLikeQueryRepository) {
+				likeQueryRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedLikes, nil)
+			},
+			expectedLikes: expectedLikes,
+			expectedErr:   nil,
+		},
+		{
+			name: "Query fails",
+			setupMocks: func(likeQueryRepo *mock.MockLikeQueryRepository) {
+				likeQueryRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
+			},
+			expectedLikes: nil,
+			expectedErr:   dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			likeQueryRepo := mock.NewMockLikeQueryRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(likeQueryRepo)
+			}
+			service := &userService{likeRepo: likeQueryRepo}
+			likes, err := service.FindMyLikedList(context.Background(), userID)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedLikes, likes)
+		})
+	}
+}
+
+func TestUserService_FindMyViewedList(t *testing.T) {
+	userID := uuid.New()
+	dbErr := errors.New("db error")
+	expectedViews := []*entity.View{{ViewerID: userID}}
+
+	testCases := []struct {
+		name          string
+		setupMocks    func(viewQueryRepo *mock.MockViewQueryRepository)
+		expectedViews []*entity.View
+		expectedErr   error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(viewQueryRepo *mock.MockViewQueryRepository) {
+				viewQueryRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedViews, nil)
+			},
+			expectedViews: expectedViews,
+			expectedErr:   nil,
+		},
+		{
+			name: "Query fails",
+			setupMocks: func(viewQueryRepo *mock.MockViewQueryRepository) {
+				viewQueryRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
+			},
+			expectedViews: nil,
+			expectedErr:   dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			viewQueryRepo := mock.NewMockViewQueryRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(viewQueryRepo)
+			}
+			service := &userService{viewRepo: viewQueryRepo}
+			views, err := service.FindMyViewedList(context.Background(), userID)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedViews, views)
+		})
+	}
+}
+
+func TestUserService_FindConnections(t *testing.T) {
+	userID := uuid.New()
+	dbErr := errors.New("db error")
+	conns1 := []*entity.Connection{{User1ID: userID}}
+	conns2 := []*entity.Connection{{User2ID: userID}}
+
+	testCases := []struct {
+		name          string
+		setupMocks    func(connQueryRepo *mock.MockConnectionQueryRepository)
+		expectedConns []*entity.Connection
+		expectedErr   error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(connQueryRepo *mock.MockConnectionQueryRepository) {
+				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(conns1, nil)
+				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User2ID: &userID}).Return(conns2, nil)
+			},
+			expectedConns: append(conns1, conns2...),
+			expectedErr:   nil,
+		},
+		{
+			name: "First query fails",
+			setupMocks: func(connQueryRepo *mock.MockConnectionQueryRepository) {
+				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(nil, dbErr)
+			},
+			expectedConns: nil,
+			expectedErr:   dbErr,
+		},
+		{
+			name: "Second query fails",
+			setupMocks: func(connQueryRepo *mock.MockConnectionQueryRepository) {
+				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(conns1, nil)
+				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User2ID: &userID}).Return(nil, dbErr)
+			},
+			expectedConns: nil,
+			expectedErr:   dbErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			connQueryRepo := mock.NewMockConnectionQueryRepository(ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(connQueryRepo)
+			}
+			service := &userService{connectionRepo: connQueryRepo}
+			conns, err := service.FindConnections(context.Background(), userID)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.ElementsMatch(t, tc.expectedConns, conns)
 		})
 	}
 }

@@ -19,7 +19,7 @@ func NewUserDataRepository(db DBTX) repo.UserDataRepository {
 	return &userDataRepository{db: db}
 }
 
-func (r *userDataRepository) Create(ctx context.Context, userData *entity.UserData) (error) {
+func (r *userDataRepository) Create(ctx context.Context, userData *entity.UserData) error {
 	query := `
 		INSERT INTO user_data (user_id, latitude, longitude, internal_score)
 		VALUES (:user_id, :latitude, :longitude, :internal_score)

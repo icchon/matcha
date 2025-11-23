@@ -19,7 +19,7 @@ func NewUserRepository(db DBTX) repo.UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) Create(ctx context.Context, user *entity.User) (error) {
+func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 	query := "INSERT INTO users (last_connection) VALUES (NULL) RETURNING *"
 	return r.db.QueryRowxContext(ctx, query).StructScan(user)
 }

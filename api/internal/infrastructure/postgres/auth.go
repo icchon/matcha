@@ -18,7 +18,7 @@ func NewAuthRepository(db DBTX) repo.AuthRepository {
 	return &authRepository{db: db}
 }
 
-func (r *authRepository) Create(ctx context.Context, auth *entity.Auth) (error) {
+func (r *authRepository) Create(ctx context.Context, auth *entity.Auth) error {
 	query := `
 		INSERT INTO auths (user_id, provider, provider_uid, email, is_verified, password_hash)
 		VALUES (:user_id, :provider, :provider_uid, :email, :is_verified, :password_hash)

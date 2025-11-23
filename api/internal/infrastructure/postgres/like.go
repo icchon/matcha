@@ -26,7 +26,7 @@ func (r *likeRepository) Create(ctx context.Context, like *entity.Like) error {
 		ON CONFLICT (liker_id, liked_id) DO NOTHING
 		RETURNING *
 	`
-	return  r.db.QueryRowxContext(ctx, query, like).StructScan(like)
+	return r.db.QueryRowxContext(ctx, query, like).StructScan(like)
 }
 
 func (r *likeRepository) Delete(ctx context.Context, likerID, likedID uuid.UUID) error {

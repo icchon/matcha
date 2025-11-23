@@ -17,7 +17,7 @@ func NewMessageRepository(db DBTX) repo.MessageRepository {
 	return &messageRepository{db: db}
 }
 
-func (r *messageRepository) Create(ctx context.Context, message *entity.Message) (error) {
+func (r *messageRepository) Create(ctx context.Context, message *entity.Message) error {
 	query := `
 		INSERT INTO messages (sender_id, recipient_id, content)
 		VALUES (:sender_id, :recipient_id, :content)

@@ -32,10 +32,10 @@ type repositoryManager struct {
 	refreshTokenRepo      repo.RefreshTokenRepository
 	userTagRepo           repo.UserTagRepository
 	verificationTokenRepo repo.VerificationTokenRepository
-	profileRepo repo.UserProfileRepository
-	viewRepo repo.ViewRepository
-	likeRepo repo.LikeRepository
-	blockRepo repo.BlockRepository
+	profileRepo           repo.UserProfileRepository
+	viewRepo              repo.ViewRepository
+	likeRepo              repo.LikeRepository
+	blockRepo             repo.BlockRepository
 }
 
 func NewRepositoryManager(
@@ -65,22 +65,22 @@ func NewRepositoryManager(
 		refreshTokenRepo:      refreshTokenRepo,
 		userTagRepo:           userTagRepo,
 		verificationTokenRepo: verificationTokenRepo,
-		profileRepo: profileRepo,
-		viewRepo: viewRepo,
-		likeRepo: likeRepo,
-		blockRepo: blockRepo,
+		profileRepo:           profileRepo,
+		viewRepo:              viewRepo,
+		likeRepo:              likeRepo,
+		blockRepo:             blockRepo,
 	}
 }
 
-func(r *repositoryManager) BlockRepo() repo.BlockRepository {
+func (r *repositoryManager) BlockRepo() repo.BlockRepository {
 	return r.blockRepo
 }
 
-func(r *repositoryManager) LikeRepo() repo.LikeRepository {
+func (r *repositoryManager) LikeRepo() repo.LikeRepository {
 	return r.likeRepo
 }
 
-func(r *repositoryManager) ViewRepo() repo.ViewRepository {
+func (r *repositoryManager) ViewRepo() repo.ViewRepository {
 	return r.viewRepo
 }
 
@@ -124,6 +124,6 @@ func (r *repositoryManager) VerificationTokenRepo() repo.VerificationTokenReposi
 	return r.verificationTokenRepo
 }
 
-func (r *repositoryManager) ProfileRepo() repo.UserProfileRepository{
+func (r *repositoryManager) ProfileRepo() repo.UserProfileRepository {
 	return r.profileRepo
 }

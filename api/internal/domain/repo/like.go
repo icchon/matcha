@@ -19,7 +19,7 @@ type LikeQueryRepository interface {
 }
 
 type LikeCommandRepository interface {
-	Create(ctx context.Context, like *entity.Like) (error)
+	Create(ctx context.Context, like *entity.Like) error
 	Delete(ctx context.Context, likerID, likedID uuid.UUID) error
 }
 

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/icchon/matcha/api/internal/domain/entity"
-	"time"
 	"log"
+	"time"
 )
 
 type ContextKey string

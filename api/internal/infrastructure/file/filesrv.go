@@ -1,18 +1,19 @@
-package fileclient
+package file
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/icchon/matcha/api/internal/domain/repo"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 type filesrvClient struct {
 	imageUploadEndpoint string
 }
+
 var _ repo.FileClient = (*filesrvClient)(nil)
 
 func NewFilesrvClient(imageUploadEndpoint string) *filesrvClient {

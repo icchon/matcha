@@ -22,7 +22,7 @@ type MessageQueryRepository interface {
 }
 
 type MessageCommandRepository interface {
-	Create(ctx context.Context, message *entity.Message) (error)
+	Create(ctx context.Context, message *entity.Message) error
 	Update(ctx context.Context, message *entity.Message) error
 	Delete(ctx context.Context, messageID int64) error
 }

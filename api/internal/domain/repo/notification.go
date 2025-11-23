@@ -22,7 +22,7 @@ type NotificationQueryRepository interface {
 }
 
 type NotificationCommandRepository interface {
-	Create(ctx context.Context, notification *entity.Notification) (error)
+	Create(ctx context.Context, notification *entity.Notification) error
 	Update(ctx context.Context, notification *entity.Notification) error
 	Delete(ctx context.Context, notificationID int64) error
 }

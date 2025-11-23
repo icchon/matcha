@@ -36,8 +36,8 @@ type UserProfileQueryRepository interface {
 }
 
 type UserProfileCommandRepository interface {
-	Create(ctx context.Context, userProfile *entity.UserProfile) (error)
-	Update(ctx context.Context, userProfile *entity.UserProfile) (error)
+	Create(ctx context.Context, userProfile *entity.UserProfile) error
+	Update(ctx context.Context, userProfile *entity.UserProfile) error
 	Delete(ctx context.Context, userID uuid.UUID) error
 }
 

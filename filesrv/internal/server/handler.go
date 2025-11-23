@@ -1,81 +1,79 @@
 package server
 
-import(
+import (
+	"bytes"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	"image/png"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
-	"bytes"
-	"image"
-	"image/png"
-	_ "image/jpeg"
-	_ "image/gif"
 )
 
-type Handler struct{
+type Handler struct {
 	UploadDir string
-	BaseUrl string
+	BaseUrl   string
 }
 
-func NewHandler(uploadDir string, baseUrl string)*Handler{
+func NewHandler(uploadDir string, baseUrl string) *Handler {
 	return &Handler{
 		UploadDir: uploadDir,
-		BaseUrl: baseUrl,
+		BaseUrl:   baseUrl,
 	}
 }
 
 func (h *Handler) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
-    if err := r.ParseMultipartForm(10 << 20); err != nil {
-        http.Error(w, fmt.Sprintf("Error parsing form data: %v", err), http.StatusBadRequest)
-        return
-    }
-    
-    file, header, err := r.FormFile("image")
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error retrieving file: %v", err), http.StatusBadRequest)
-        return
-    }
-    defer file.Close()
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, fmt.Sprintf("Error parsing form data: %v", err), http.StatusBadRequest)
+		return
+	}
 
-    fileBytes, err := io.ReadAll(file)
-    if err != nil {
-        http.Error(w, "Error reading file content into memory", http.StatusInternalServerError)
-        return
-    }
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error retrieving file: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
 
-    pngBytes, err := ConvertToPNG(fileBytes)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error converting image format: %v", err), http.StatusBadRequest)
-        return
-    }
-    
-    baseName := filepath.Base(header.Filename)
-    ext := filepath.Ext(baseName)
-    uniqueName := fmt.Sprintf("%d_%s.png", time.Now().UnixNano(), baseName[:len(baseName)-len(ext)])
-    
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Error reading file content into memory", http.StatusInternalServerError)
+		return
+	}
 
-    filePath := filepath.Join(h.UploadDir, uniqueName)
-    dst, err := os.Create(filePath)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error creating file on server: %v", err), http.StatusInternalServerError)
-        return
-    }
-    defer dst.Close()
+	pngBytes, err := ConvertToPNG(fileBytes)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error converting image format: %v", err), http.StatusBadRequest)
+		return
+	}
 
-    if _, err = dst.Write(pngBytes); err != nil {
-        http.Error(w, fmt.Sprintf("Error writing PNG data to file: %v", err), http.StatusInternalServerError)
-        return
-    }
+	baseName := filepath.Base(header.Filename)
+	ext := filepath.Ext(baseName)
+	uniqueName := fmt.Sprintf("%d_%s.png", time.Now().UnixNano(), baseName[:len(baseName)-len(ext)])
 
-    fileURL := h.BaseUrl + fmt.Sprintf("/images/%s", uniqueName)
+	filePath := filepath.Join(h.UploadDir, uniqueName)
+	dst, err := os.Create(filePath)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating file on server: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
 
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte(fmt.Sprintf(`{"message": "File uploaded successfully", "url": "%s"}`, fileURL)))
+	if _, err = dst.Write(pngBytes); err != nil {
+		http.Error(w, fmt.Sprintf("Error writing PNG data to file: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	fileURL := h.BaseUrl + fmt.Sprintf("/images/%s", uniqueName)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf(`{"message": "File uploaded successfully", "url": "%s"}`, fileURL)))
 }
-
 
 func ConvertToPNG(inputData []byte) ([]byte, error) {
 	img, _, err := image.Decode(bytes.NewReader(inputData))

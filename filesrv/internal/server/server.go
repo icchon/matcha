@@ -1,6 +1,6 @@
 package server
 
-import(
+import (
 	"context"
 	"fmt"
 	"net/http"
@@ -12,20 +12,19 @@ import(
 	"log"
 )
 
-
-type ServerConfig struct{
+type ServerConfig struct {
 	ServerAddress string
-	UploadDir string
-	BaseUrl string
+	UploadDir     string
+	BaseUrl       string
 }
 
-type Server struct{
-	router *chi.Mux
+type Server struct {
+	router     *chi.Mux
 	config     *ServerConfig
 	httpServer *http.Server
 }
 
-func NewServer(config *ServerConfig) *Server{
+func NewServer(config *ServerConfig) *Server {
 
 	if _, err := os.Stat(config.UploadDir); os.IsNotExist(err) {
 		if err := os.Mkdir(config.UploadDir, 0755); err != nil {
@@ -46,11 +45,10 @@ func NewServer(config *ServerConfig) *Server{
 
 	h := NewHandler(config.UploadDir, config.BaseUrl)
 	r.Post("/upload", h.UploadImageHandler)
-	
+
 	fileServer(r, "/images", http.Dir(config.UploadDir))
 	return server
 }
-
 
 func (s *Server) Start() error {
 	s.httpServer = &http.Server{
@@ -72,7 +70,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	log.Println("Shutting down server gracefully...")
 	return s.httpServer.Shutdown(ctx)
 }
-
 
 func fileServer(r chi.Router, path string, root http.FileSystem) {
 	if path != "/" && path[len(path)-1] != '/' {

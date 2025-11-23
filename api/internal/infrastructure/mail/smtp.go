@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/go-mail/mail"
 	"github.com/icchon/matcha/api/internal/domain/repo"
-	"time"
 	"log"
+	"time"
 )
 
 type SmtpClient struct {

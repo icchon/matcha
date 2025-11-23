@@ -339,3 +339,5 @@ filesrv/uploads/*.svg
 filesrv/uploads/*.HEIC
 filesrv/uploads/*.heic
 file-server
+api-server
+ws-server

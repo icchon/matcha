@@ -89,7 +89,7 @@ func (s *authService) LoginOAuth(ctx context.Context, code string, codeVerifier 
 	if len(authes) == 0 {
 		err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
 			user := &entity.User{}
-			if err := m.UserRepo().Create(ctx, user); err != nil{
+			if err := m.UserRepo().Create(ctx, user); err != nil {
 				return err
 			}
 			auth = &entity.Auth{
@@ -162,7 +162,7 @@ func (s *authService) SendPasswordResetEmail(ctx context.Context, email string) 
 			ExpiresAt: time.Now().Add(time.Hour),
 		}
 		return m.PasswordResetRepo().Create(ctx, passwordReset)
-	});err != nil{
+	}); err != nil {
 		return err
 	}
 	return s.mailService.SendPasswordResetEmail(ctx, email, token)
@@ -227,7 +227,7 @@ func (s *authService) Signup(ctx context.Context, email string, password string)
 	var id uuid.UUID
 	if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
 		user := &entity.User{}
-		if err := m.UserRepo().Create(ctx, user); err != nil{
+		if err := m.UserRepo().Create(ctx, user); err != nil {
 			return err
 		}
 		id = user.ID
@@ -237,14 +237,14 @@ func (s *authService) Signup(ctx context.Context, email string, password string)
 			return apperrors.ErrInternalServer
 		}
 		auth := &entity.Auth{
-			UserID:      id,
-			Email:       sql.NullString{String: email, Valid: true},
-			Provider:    entity.ProviderLocal,
+			UserID:       id,
+			Email:        sql.NullString{String: email, Valid: true},
+			Provider:     entity.ProviderLocal,
 			PasswordHash: sql.NullString{String: passwordHash, Valid: true},
-			IsVerified:  false,
+			IsVerified:   false,
 		}
 		return m.AuthRepo().Create(ctx, auth)
-	}); err != nil{
+	}); err != nil {
 		return err
 	}
 	return s.SendVerificationEmail(ctx, email, id)
@@ -264,7 +264,7 @@ func (s *authService) IssueEMailToken(ctx context.Context, userID uuid.UUID) (st
 		if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
 			m.VerificationTokenRepo().Update(ctx, tokens[0])
 			return nil
-		}); err != nil{
+		}); err != nil {
 			return "", err
 		}
 	} else if len(tokens) == 0 {
@@ -275,7 +275,7 @@ func (s *authService) IssueEMailToken(ctx context.Context, userID uuid.UUID) (st
 				ExpiresAt: time.Now().Add(time.Hour),
 			}
 			return m.VerificationTokenRepo().Create(ctx, verificationToken)
-		}); err != nil{
+		}); err != nil {
 			return "", err
 		}
 	}
@@ -371,7 +371,7 @@ func (s *authService) IssueRefreshToken(ctx context.Context, userID uuid.UUID) (
 			ExpiresAt: time.Now().Add(24 * time.Hour),
 		}
 		return m.RefreshTokenRepo().Create(ctx, refreshToken)
-	}); err != nil{
+	}); err != nil {
 		return "", err
 	}
 	return refreshToken, nil

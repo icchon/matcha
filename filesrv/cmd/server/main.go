@@ -1,30 +1,30 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"os"
-	"time"
-	"log"
 	"os/signal"
 	"syscall"
-	"context"
+	"time"
+
 	"github.com/icchon/matcha/filesrv/internal/server"
 )
-
 
 func main() {
 	var config server.ServerConfig
 	var ok bool
-	config.ServerAddress, ok = os.LookupEnv("SERVER_ADDRESS")
-	if !ok{
-		log.Fatalf("SERVER_ADDRESS not set")
+	config.ServerAddress, ok = os.LookupEnv("SERVER_ADDR")
+	if !ok {
+		log.Fatalf("SERVER_ADDR not set")
 	}
 	config.UploadDir, ok = os.LookupEnv("UPLOAD_DIR")
-	if !ok{
+	if !ok {
 		log.Fatalf("UPLOAD_DIR not set")
 	}
 	config.BaseUrl, ok = os.LookupEnv("BASE_URL")
-	if !ok{
+	if !ok {
 		log.Fatalf("BASE_URL not set")
 	}
 	srv := server.NewServer(&config)

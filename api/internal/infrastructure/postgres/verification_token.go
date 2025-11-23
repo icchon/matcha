@@ -18,7 +18,7 @@ func NewVerificationTokenRepository(db DBTX) repo.VerificationTokenRepository {
 	return &verificationTokenRepository{db: db}
 }
 
-func (r *verificationTokenRepository) Create(ctx context.Context, verificationToken *entity.VerificationToken) (error) {
+func (r *verificationTokenRepository) Create(ctx context.Context, verificationToken *entity.VerificationToken) error {
 	query := `
 		INSERT INTO verification_tokens (token, user_id, expires_at)
 		VALUES (:token, :user_id, :expires_at)
