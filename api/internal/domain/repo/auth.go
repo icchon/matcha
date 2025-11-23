@@ -17,12 +17,12 @@ type AuthQuery struct {
 }
 
 type CreateAuthParams struct {
-	UserID       uuid.UUID
-	Email        sql.NullString
-	Provider     entity.AuthProvider
-	ProviderUID  sql.NullString
-	IsVerified   bool
-	PasswordHash sql.NullString
+	UserID       uuid.UUID           `db:"user_id"`
+	Email        sql.NullString      `db:"email"`
+	Provider     entity.AuthProvider `db:"provider"`
+	ProviderUID  sql.NullString      `db:"provider_uid"`
+	IsVerified   bool                `db:"is_verified"`
+	PasswordHash sql.NullString      `db:"password_hash"`
 }
 
 type AuthQueryRepository interface {
@@ -31,7 +31,7 @@ type AuthQueryRepository interface {
 }
 
 type AuthCommandRepository interface {
-	Create(ctx context.Context, params CreateAuthParams) (*entity.Auth, error)
+	Create(ctx context.Context, auth *entity.Auth) error
 	Update(ctx context.Context, auth *entity.Auth) error
 	Delete(ctx context.Context, userID uuid.UUID, provider entity.AuthProvider) error
 }

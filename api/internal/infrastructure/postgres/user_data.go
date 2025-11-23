@@ -19,22 +19,13 @@ func NewUserDataRepository(db DBTX) repo.UserDataRepository {
 	return &userDataRepository{db: db}
 }
 
-func (r *userDataRepository) Create(ctx context.Context, params repo.CreateUserDataParams) (*entity.UserData, error) {
+func (r *userDataRepository) Create(ctx context.Context, userData *entity.UserData) error {
 	query := `
 		INSERT INTO user_data (user_id, latitude, longitude, internal_score)
 		VALUES (:user_id, :latitude, :longitude, :internal_score)
 		RETURNING *
 	`
-	var userData entity.UserData
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &userData, params)
-	if err != nil {
-		return nil, err
-	}
-	return &userData, nil
+	return r.db.QueryRowxContext(ctx, query, userData).StructScan(userData)
 }
 
 func (r *userDataRepository) Update(ctx context.Context, userData *entity.UserData) error {

@@ -16,19 +16,13 @@ type NotificationQuery struct {
 	CreatedAt   *time.Time
 }
 
-type CreateNotificationParams struct {
-	RecipientID uuid.UUID
-	SenderID    uuid.UUID
-	Type        entity.NotificationType
-}
-
 type NotificationQueryRepository interface {
 	Find(ctx context.Context, notificationID int64) (*entity.Notification, error)
 	Query(ctx context.Context, q *NotificationQuery) ([]*entity.Notification, error)
 }
 
 type NotificationCommandRepository interface {
-	Create(ctx context.Context, params CreateNotificationParams) (*entity.Notification, error)
+	Create(ctx context.Context, notification *entity.Notification) error
 	Update(ctx context.Context, notification *entity.Notification) error
 	Delete(ctx context.Context, notificationID int64) error
 }

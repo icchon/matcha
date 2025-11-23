@@ -10,16 +10,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/icchon/matcha/api/internal/server"
 )
 
 func checkEnv() error {
 	envKeys := []string{
-		"SERVER_ADDRESS",
+		"SERVER_ADDR",
 		"DATABASE_URL",
 		"JWT_SIGNING_KEY",
 		"GOOGLE_CLIENT_ID",
@@ -28,6 +30,13 @@ func checkEnv() error {
 		"GITHUB_CLIENT_SECRET",
 		"REDIRECT_URI",
 		"HMAC_SECRET_KEY",
+		"SMTP_HOST",
+		"SMTP_PORT",
+		"SMTP_USERNAME",
+		"SMTP_PASSWORD",
+		"SMTP_SENDER",
+		"BASE_URL",
+		"REDIS_ADDR",
 	}
 
 	for _, envKey := range envKeys {
@@ -50,16 +59,28 @@ func getEnv(key string) string {
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("No .env file found, loading from environment variables: %v", err)
+		log.Println("No .env file found or error loading .env file, proceeding with system environment variables.")
 	}
-
 	if err := checkEnv(); err != nil {
 		log.Fatalf("Environment check failed: %v", err)
 	}
 
 	cfg := &server.Config{
-		ServerAddress: getEnv("SERVER_ADDRESS"),
-		JWTSigningKey: getEnv("JWT_SIGNING_KEY"),
+		ServerAddress:       getEnv("SERVER_ADDR"),
+		JWTSigningKey:       getEnv("JWT_SIGNING_KEY"),
+		HMACSecretKey:       getEnv("HMAC_SECRET_KEY"),
+		GoogleClientID:      getEnv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret:  getEnv("GOOGLE_CLIENT_SECRET"),
+		GithubClientID:      getEnv("GITHUB_CLIENT_ID"),
+		GithubClientSecret:  getEnv("GITHUB_CLIENT_SECRET"),
+		RidirectURI:         getEnv("REDIRECT_URI"),
+		SmtpHost:            getEnv("SMTP_HOST"),
+		SmtpPort:            getEnv("SMTP_PORT"),
+		SmtpUsername:        getEnv("SMTP_USERNAME"),
+		SmtpPassword:        getEnv("SMTP_PASSWORD"),
+		SmtpSender:          getEnv("SMTP_SENDER"),
+		BaseUrl:             getEnv("BASE_URL"),
+		ImageUploadEndpoint: getEnv("IMAGE_UPLOAD_ENDPOINT"),
 	}
 
 	db, err := sqlx.Connect("postgres", getEnv("DATABASE_URL"))
@@ -67,11 +88,22 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
-
 	log.Println("Successfully connected to the database.")
 
-	srv := server.NewServer(db, cfg)
+	redisAddr := getEnv("REDIS_ADDR")
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
+	if _, err := rdb.Ping(context.Background()).Result(); err != nil {
+		log.Fatalf("Failed to connect to Redis at %s: %v", redisAddr, err)
+	}
+	defer rdb.Close()
+	log.Println("Successfully connected to Redis.")
 
+	srv := server.NewServer(db, cfg)
+	if srv == nil {
+		log.Fatalf("Faild to setup server")
+	}
 	go func() {
 
 		if err := srv.Start(); err != nil && err != http.ErrServerClosed {

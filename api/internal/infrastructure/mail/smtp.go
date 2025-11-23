@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-mail/mail"
 	"github.com/icchon/matcha/api/internal/domain/repo"
+	"log"
 	"time"
 )
 
@@ -48,5 +49,6 @@ func (c *SmtpClient) SendRawEmail(ctx context.Context, toEmail, subject, htmlBod
 	if err := c.dialer.DialAndSend(m); err != nil {
 		return fmt.Errorf("SMTP通信エラー: %w", err)
 	}
+	log.Println("メール送信成功")
 	return nil
 }

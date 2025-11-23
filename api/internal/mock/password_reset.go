@@ -97,18 +97,17 @@ func (m *MockPasswordResetCommandRepository) EXPECT() *MockPasswordResetCommandR
 }
 
 // Create mocks base method.
-func (m *MockPasswordResetCommandRepository) Create(ctx context.Context, params repo.CreatePasswordResetParams) (*entity.PasswordReset, error) {
+func (m *MockPasswordResetCommandRepository) Create(ctx context.Context, passwordReset *entity.PasswordReset) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, params)
-	ret0, _ := ret[0].(*entity.PasswordReset)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Create", ctx, passwordReset)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockPasswordResetCommandRepositoryMockRecorder) Create(ctx, params any) *gomock.Call {
+func (mr *MockPasswordResetCommandRepositoryMockRecorder) Create(ctx, passwordReset any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPasswordResetCommandRepository)(nil).Create), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPasswordResetCommandRepository)(nil).Create), ctx, passwordReset)
 }
 
 // Delete mocks base method.
@@ -164,18 +163,17 @@ func (m *MockPasswordResetRepository) EXPECT() *MockPasswordResetRepositoryMockR
 }
 
 // Create mocks base method.
-func (m *MockPasswordResetRepository) Create(ctx context.Context, params repo.CreatePasswordResetParams) (*entity.PasswordReset, error) {
+func (m *MockPasswordResetRepository) Create(ctx context.Context, passwordReset *entity.PasswordReset) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, params)
-	ret0, _ := ret[0].(*entity.PasswordReset)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Create", ctx, passwordReset)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockPasswordResetRepositoryMockRecorder) Create(ctx, params any) *gomock.Call {
+func (mr *MockPasswordResetRepositoryMockRecorder) Create(ctx, passwordReset any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPasswordResetRepository)(nil).Create), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPasswordResetRepository)(nil).Create), ctx, passwordReset)
 }
 
 // Delete mocks base method.

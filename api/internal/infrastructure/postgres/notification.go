@@ -17,22 +17,13 @@ func NewNotificationRepository(db DBTX) repo.NotificationRepository {
 	return &notificationRepository{db: db}
 }
 
-func (r *notificationRepository) Create(ctx context.Context, params repo.CreateNotificationParams) (*entity.Notification, error) {
+func (r *notificationRepository) Create(ctx context.Context, notification *entity.Notification) error {
 	query := `
 		INSERT INTO notifications (recipient_id, sender_id, type)
 		VALUES (:recipient_id, :sender_id, :type)
 		RETURNING *
 	`
-	var notification entity.Notification
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &notification, params)
-	if err != nil {
-		return nil, err
-	}
-	return &notification, nil
+	return r.db.QueryRowxContext(ctx, query, notification).StructScan(notification)
 }
 
 func (r *notificationRepository) Update(ctx context.Context, notification *entity.Notification) error {

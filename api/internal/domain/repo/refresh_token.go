@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/domain/entity"
-	"time"
 )
 
 type RefreshTokenQuery struct {
@@ -13,19 +12,13 @@ type RefreshTokenQuery struct {
 	Revoked   *bool
 }
 
-type CreateRefreshTokenParams struct {
-	TokenHash string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-}
-
 type RefreshTokenQueryRepository interface {
 	Find(ctx context.Context, tokenHash string) (*entity.RefreshToken, error)
 	Query(ctx context.Context, q *RefreshTokenQuery) ([]*entity.RefreshToken, error)
 }
 
 type RefreshTokenCommandRepository interface {
-	Create(ctx context.Context, params CreateRefreshTokenParams) (*entity.RefreshToken, error)
+	Create(ctx context.Context, token *entity.RefreshToken) error
 	Update(ctx context.Context, token *entity.RefreshToken) error
 	Delete(ctx context.Context, tokenHash string) error
 }

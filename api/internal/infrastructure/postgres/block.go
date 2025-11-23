@@ -24,9 +24,9 @@ func (r *blockRepository) Create(ctx context.Context, block *entity.Block) error
 		INSERT INTO blocks (blocker_id, blocked_id)
 		VALUES (:blocker_id, :blocked_id)
 		ON CONFLICT (blocker_id, blocked_id) DO NOTHING
+		RETURNING *
 	`
-	_, err := r.db.NamedExecContext(ctx, query, block)
-	return err
+	return r.db.QueryRowxContext(ctx, query, block).StructScan(block)
 }
 
 func (r *blockRepository) Delete(ctx context.Context, blockerID, blockedID uuid.UUID) error {

@@ -26,8 +26,11 @@ type LoginHandlerRequest struct {
 	Password string `json:"password"`
 }
 type LoginHandlerResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID       uuid.UUID `json:"user_id"`
+	IsVerified   bool      `json:"is_verified"`
+	AuthMethod   string    `json:"auth_method"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 // /auth/login POST
@@ -37,12 +40,12 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
-	access, refresh, err := h.authService.Login(r.Context(), req.Email, req.Password)
+	auth, access, refresh, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		helper.HandleError(w, err)
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, LoginHandlerResponse{AccessToken: access, RefreshToken: refresh})
+	helper.RespondWithJSON(w, http.StatusOK, LoginHandlerResponse{AccessToken: access, RefreshToken: refresh, UserID: auth.UserID, IsVerified: auth.IsVerified, AuthMethod: string(auth.Provider)})
 }
 
 // auth/logout POST
@@ -160,8 +163,11 @@ type GoogleLoginRequest struct {
 	CodeVerifier string `json:"code_verifier"`
 }
 type GoogleLoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID       uuid.UUID `json:"user_id"`
+	IsVerified   bool      `json:"is_verified"`
+	AuthMethod   string    `json:"auth_method"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (h *AuthHandler) GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -170,12 +176,12 @@ func (h *AuthHandler) GoogleLoginHandler(w http.ResponseWriter, r *http.Request)
 		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
-	access, refresh, err := h.authService.LoginOAuth(r.Context(), req.Code, req.CodeVerifier, entity.ProviderGoogle)
+	auth, access, refresh, err := h.authService.LoginOAuth(r.Context(), req.Code, req.CodeVerifier, entity.ProviderGoogle)
 	if err != nil {
 		helper.HandleError(w, err)
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, GoogleLoginResponse{AccessToken: access, RefreshToken: refresh})
+	helper.RespondWithJSON(w, http.StatusOK, GoogleLoginResponse{AccessToken: access, RefreshToken: refresh, UserID: auth.UserID, IsVerified: auth.IsVerified, AuthMethod: string(auth.Provider)})
 }
 
 // auth/oauth/github/login
@@ -184,8 +190,11 @@ type GithubLoginRequest struct {
 	CodeVerifier string `json:"code_verifier"`
 }
 type GithubLoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID       uuid.UUID `json:"user_id"`
+	IsVerified   bool      `json:"is_verified"`
+	AuthMethod   string    `json:"auth_method"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
 }
 
 func (h *AuthHandler) GithubLoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,10 +203,10 @@ func (h *AuthHandler) GithubLoginHandler(w http.ResponseWriter, r *http.Request)
 		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
-	access, refresh, err := h.authService.LoginOAuth(r.Context(), req.Code, req.CodeVerifier, entity.ProviderGithub)
+	auth, access, refresh, err := h.authService.LoginOAuth(r.Context(), req.Code, req.CodeVerifier, entity.ProviderGithub)
 	if err != nil {
 		helper.HandleError(w, err)
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, GoogleLoginResponse{AccessToken: access, RefreshToken: refresh})
+	helper.RespondWithJSON(w, http.StatusOK, GoogleLoginResponse{AccessToken: access, RefreshToken: refresh, UserID: auth.UserID, IsVerified: auth.IsVerified, AuthMethod: string(auth.Provider)})
 }

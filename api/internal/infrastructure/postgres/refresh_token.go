@@ -61,22 +61,13 @@ func (r *refreshTokenRepository) Query(ctx context.Context, q *repo.RefreshToken
 	return tokens, nil
 }
 
-func (r *refreshTokenRepository) Create(ctx context.Context, params repo.CreateRefreshTokenParams) (*entity.RefreshToken, error) {
+func (r *refreshTokenRepository) Create(ctx context.Context, refreshToken *entity.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (token_hash, user_id, expires_at)
 		VALUES (:token_hash, :user_id, :expires_at)
 		RETURNING *
 	`
-	var token entity.RefreshToken
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	err = stmt.GetContext(ctx, &token, params)
-	if err != nil {
-		return nil, err
-	}
-	return &token, nil
+	return r.db.QueryRowxContext(ctx, query, refreshToken).StructScan(refreshToken)
 }
 
 func (r *refreshTokenRepository) Update(ctx context.Context, token *entity.RefreshToken) error {

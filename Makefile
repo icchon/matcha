@@ -1,7 +1,7 @@
 include .env
 
 api-local:
-	cd api && go build ./cmd/server && ./server
+	cd api && go build ./cmd/api-server && ./api-server
 
 fmt:
 	gofmt -w .

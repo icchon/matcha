@@ -34,6 +34,10 @@ func (u *unitOfWork) Do(ctx context.Context, fn func(m RepositoryManager) error)
 		postgres.NewRefreshTokenRepository(tx),
 		postgres.NewUserTagRepository(tx),
 		postgres.NewVerificationTokenRepository(tx),
+		postgres.NewUserProfileRepository(tx),
+		postgres.NewViewRepository(tx),
+		postgres.NewLikeRepository(tx),
+		postgres.NewBlockRepository(tx),
 	)
 	if err = fn(manager); err != nil {
 		return tx.Rollback()

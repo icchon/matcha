@@ -19,7 +19,7 @@ type ViewQueryRepository interface {
 }
 
 type ViewCommandRepository interface {
-	Save(ctx context.Context, view *entity.View) error
+	Create(ctx context.Context, view *entity.View) error
 	Delete(ctx context.Context, viewerID, viewedID uuid.UUID) error
 }
 

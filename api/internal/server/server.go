@@ -3,15 +3,17 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/jmoiron/sqlx"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jmoiron/sqlx"
+
 	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/infrastructure/file"
 	smtp "github.com/icchon/matcha/api/internal/infrastructure/mail"
 	"github.com/icchon/matcha/api/internal/infrastructure/oauth"
 	"github.com/icchon/matcha/api/internal/infrastructure/postgres"
@@ -20,26 +22,28 @@ import (
 	appmiddleware "github.com/icchon/matcha/api/internal/presentation/middleware"
 	"github.com/icchon/matcha/api/internal/service/auth"
 	"github.com/icchon/matcha/api/internal/service/mail"
+	"github.com/icchon/matcha/api/internal/service/profile"
 	"github.com/icchon/matcha/api/internal/service/user"
 )
 
 type Config struct {
-	ServerAddress      string
-	JWTSigningKey      string
-	HMACSecretKey      string
-	GoogleClientID     string
-	GoogleClientSecret string
-	GithubClientID     string
-	GithubClientSecret string
-	RidirectURI        string
+	ServerAddress       string
+	JWTSigningKey       string
+	HMACSecretKey       string
+	GoogleClientID      string
+	GoogleClientSecret  string
+	GithubClientID      string
+	GithubClientSecret  string
+	RidirectURI         string
+	ImageUploadEndpoint string
 
-	SMTP_HOST     string
-	SMTP_PORT     string
-	SMTP_USERNAME string
-	SMTP_PASSWORD string
-	SMTP_SENDER   string
+	SmtpHost     string
+	SmtpPort     string
+	SmtpUsername string
+	SmtpPassword string
+	SmtpSender   string
 
-	BASE_URL string
+	BaseUrl string
 }
 
 type Server struct {
@@ -50,27 +54,48 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(db *sqlx.DB, config *Config) *Server {
+func NewServer(
+	db *sqlx.DB,
+	config *Config,
+) *Server {
 	unitOfWork := uow.NewUnitOfWork(db)
+
+	fileClient := file.NewFilesrvClient(config.ImageUploadEndpoint)
+	port, err := strconv.Atoi(config.SmtpPort)
+	if err != nil {
+		log.Printf("Invalid SMTP_PORT: %v", err)
+		return nil
+	}
+	smtpClient := smtp.NewSmtpClient(repo.MailConfig{
+		Host:     config.SmtpHost,
+		Port:     port,
+		Username: config.SmtpUsername,
+		Password: config.SmtpPassword,
+		From:     config.SmtpSender,
+	})
+	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
+	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
+
 	userRepository := postgres.NewUserRepository(db)
 	authRepository := postgres.NewAuthRepository(db)
 	refreshRepository := postgres.NewRefreshTokenRepository(db)
 	passwordResetRepository := postgres.NewPasswordResetRepository(db)
 	verificationRepository := postgres.NewVerificationTokenRepository(db)
-	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
-	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
-	port, err := strconv.Atoi(config.SMTP_PORT)
-	if err != nil {
-		return nil
-	}
-	smtpClient := smtp.NewSmtpClient(repo.MailConfig{Host: config.SMTP_HOST, Port: port, Username: config.SMTP_USERNAME, Password: config.SMTP_PASSWORD, From: config.SMTP_SENDER})
+	likeRepository := postgres.NewLikeRepository(db)
+	viewRepository := postgres.NewViewRepository(db)
+	connectionRepo := postgres.NewConnectionRepository(db)
+	profileRepository := postgres.NewUserProfileRepository(db)
+	pictureRepository := postgres.NewPictureRepository(db)
 
-	userService := user.NewUserService(unitOfWork, userRepository)
-	mailService := mail.NewApplicationMailService(smtpClient, config.BASE_URL)
+	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo)
+	mailService := mail.NewApplicationMailService(smtpClient, config.BaseUrl)
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
-	userHandler := handler.NewUserHandler(userService)
+	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository)
+
+	userHandler := handler.NewUserHandler(userService, profileService)
 	sampleHander := handler.NewSampleHandler()
 	authHandler := handler.NewAuthHandler(authService)
+	profileHandler := handler.NewProfileHandler(profileService)
 
 	mux := chi.NewRouter()
 
@@ -80,12 +105,12 @@ func NewServer(db *sqlx.DB, config *Config) *Server {
 		config: config,
 	}
 
-	server.setupRoutes(userHandler, sampleHander, authHandler)
+	server.setupRoutes(userHandler, sampleHander, authHandler, profileHandler)
 
 	return server
 }
 
-func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler, ah *handler.AuthHandler) {
+func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler, ah *handler.AuthHandler, ph *handler.ProfileHandler) {
 	s.router.Use(middleware.RequestID)
 	s.router.Use(middleware.Logger)
 	s.router.Use(middleware.Recoverer)
@@ -95,32 +120,49 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 		r.Get("/sample", sh.GreetingHandler)
 
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/login", ah.LoginHandler)
-			r.Post("/signup", ah.SignupHandler)
 			r.Group(func(r chi.Router) {
 				r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
 				r.Post("/logout", ah.LogoutHandler)
 			})
-			r.Route("/verify", func(r chi.Router) {
-				r.Post("/mail", ah.SendVerificationEmailHandler)
-				r.Get("/{token}", ah.VerifyEmailHandler)
-			})
-			r.Route("/oauth", func(r chi.Router) {
-				r.Route("/google", func(r chi.Router) {
-					r.Post("/login", ah.GoogleLoginHandler)
+			r.Post("/login", ah.LoginHandler)
+			r.Post("/signup", ah.SignupHandler)
+			r.Post("/verify/mail", ah.SendVerificationEmailHandler)
+			r.Get("/verify/{token}", ah.VerifyEmailHandler)
+			r.Post("/oauth/google/login", ah.GoogleLoginHandler)
+			r.Post("/oauth/github/login", ah.GithubLoginHandler)
+			r.Post("/password/forgot", ah.PasswordResetHandler)
+			r.Post("/password/reset", ah.PasswordResetConfirmHandler)
+		})
+
+		r.Route("/users", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Route("/{userID}", func(r chi.Router) {
+					r.Post("/like", uh.LikeUserHandler)
+					r.Delete("/like", uh.UnlikeUserHandler)
+					r.Post("/block", uh.BlockUserHandler)
 				})
-				r.Route("/github", func(r chi.Router) {
-					r.Post("/login", ah.GithubLoginHandler)
+				r.Route("/me", func(r chi.Router) {
+					r.Delete("/", uh.DeleteMyAccountHandler)
+					r.Get("/likes", uh.GetMyLikedListHandler)
+					r.Get("/views", uh.GetMyViewedListHandler)
+					r.Get("/blocks", uh.GetMyBlockedListHandler)
+					r.Delete("/blocks/{userID}", uh.UnblockUserHandler)
 				})
-			})
-			r.Route("/password", func(r chi.Router) {
-				r.Post("/forgot", ah.PasswordResetHandler)
-				r.Post("/reset", ah.PasswordResetConfirmHandler)
 			})
 		})
 
-	})
+		r.Route("/profile", func(r chi.Router) {
+			r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
 
+			r.Post("/", ph.CreateProfileHandler)
+			r.Put("/", ph.UpdateProfileHandler)
+			r.Post("/pictures", ph.UploadProfilePictureHandler)
+			r.Delete("/pictures/{pictureID}", ph.DeleteProfilePictureHandler)
+			r.Get("/likes", ph.GetWhoLikeMeListHandler)
+			r.Get("/views", ph.GetWhoViewedMeListHandler)
+		})
+
+	})
 	log.Println("Routes registered.")
 }
 

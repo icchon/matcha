@@ -21,12 +21,12 @@ func NewLikeRepository(db DBTX) repo.LikeRepository {
 
 func (r *likeRepository) Create(ctx context.Context, like *entity.Like) error {
 	query := `
-		INSERT INTO likes (liker_id, liked_id, created_at)
-		VALUES (:liker_id, :liked_id, :created_at)
+		INSERT INTO likes (liker_id, liked_id)
+		VALUES (:liker_id, :liked_id)
 		ON CONFLICT (liker_id, liked_id) DO NOTHING
+		RETURNING *
 	`
-	_, err := r.db.NamedExecContext(ctx, query, like)
-	return err
+	return r.db.QueryRowxContext(ctx, query, like).StructScan(like)
 }
 
 func (r *likeRepository) Delete(ctx context.Context, likerID, likedID uuid.UUID) error {
