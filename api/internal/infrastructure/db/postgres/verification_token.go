@@ -24,7 +24,12 @@ func (r *verificationTokenRepository) Create(ctx context.Context, verificationTo
 		VALUES (:token, :user_id, :expires_at)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, verificationToken).StructScan(verificationToken)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, verificationToken).StructScan(verificationToken)
 }
 
 func (r *verificationTokenRepository) Update(ctx context.Context, token *entity.VerificationToken) error {

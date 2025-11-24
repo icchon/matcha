@@ -26,7 +26,20 @@ func (r *likeRepository) Create(ctx context.Context, like *entity.Like) error {
 		ON CONFLICT (liker_id, liked_id) DO NOTHING
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, like).StructScan(like)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if err := stmt.QueryRowxContext(ctx, like).StructScan(like); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// This is not an error in the case of a conflict where nothing is returned.
+			// The like relationship already exists.
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *likeRepository) Delete(ctx context.Context, likerID, likedID uuid.UUID) error {

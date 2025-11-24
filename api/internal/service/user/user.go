@@ -19,12 +19,13 @@ type userService struct {
 
 var _ service.UserService = (*userService)(nil)
 
-func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository) service.UserService {
+func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository, notifSvc service.NotificationService) service.UserService {
 	return &userService{
 		uow:            uow,
 		likeRepo:       likeRepo,
 		viewRepo:       viewRepo,
 		connectionRepo: connectionRepo,
+		notifSvc:       notifSvc,
 	}
 }
 
@@ -106,9 +107,13 @@ func (s *userService) LikeUser(ctx context.Context, likerID, likedID uuid.UUID) 
 			return err
 		}
 		if love {
+			user1ID, user2ID := likerID, likedID
+			if likerID.String() > likedID.String() {
+				user1ID, user2ID = likedID, likerID
+			}
 			connection = &entity.Connection{
-				User1ID: likerID,
-				User2ID: likedID,
+				User1ID: user1ID,
+				User2ID: user2ID,
 			}
 			if err := rm.ConnectionRepo().Create(ctx, connection); err != nil {
 				return err

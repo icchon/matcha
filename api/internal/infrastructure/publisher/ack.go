@@ -6,7 +6,7 @@ import (
 	"github.com/icchon/matcha/api/internal/domain/client"
 )
 
-const ackCannnel string = "ack_channel"
+const ackChannel string = "ack_channel"
 
 type ackPublisher struct {
 	rdb     *redis.Client
@@ -18,11 +18,10 @@ var _ client.Publisher = (*ackPublisher)(nil)
 func NewAckPublisher(rdb *redis.Client) *ackPublisher {
 	return &ackPublisher{
 		rdb:     rdb,
-		channel: ackCannnel,
+		channel: ackChannel,
 	}
 }
 
 func (p *ackPublisher) Publish(ctx context.Context, data interface{}) error {
-	p.rdb.Publish(ctx, p.channel, data)
-	return nil
+	return p.rdb.Publish(ctx, p.channel, data).Err()
 }

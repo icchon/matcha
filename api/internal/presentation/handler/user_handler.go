@@ -30,7 +30,7 @@ type LikeUserResponse struct {
 func (h *UserHandler) LikeUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
 	if !ok {
-		helper.HandleError(w, apperrors.ErrInternalServer)
+		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
 	likedIDStr := chi.URLParam(r, string(helper.UserIDUrlParam))

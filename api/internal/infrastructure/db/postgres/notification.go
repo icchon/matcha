@@ -23,7 +23,12 @@ func (r *notificationRepository) Create(ctx context.Context, notification *entit
 		VALUES (:recipient_id, :sender_id, :type)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, notification).StructScan(notification)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, notification).StructScan(notification)
 }
 
 func (r *notificationRepository) Update(ctx context.Context, notification *entity.Notification) error {

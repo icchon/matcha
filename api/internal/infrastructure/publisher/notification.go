@@ -6,23 +6,22 @@ import (
 	"github.com/icchon/matcha/api/internal/domain/client"
 )
 
-const notificationCannnel string = "notification_channel"
+const notificationChannel string = "notification_channel"
 
 type notificationPublisher struct {
 	rdb     *redis.Client
 	channel string
 }
 
-var _ client.Publisher = (*ackPublisher)(nil)
+var _ client.Publisher = (*notificationPublisher)(nil)
 
 func NewNotificationPublisher(rdb *redis.Client) *notificationPublisher {
 	return &notificationPublisher{
 		rdb:     rdb,
-		channel: notificationCannnel,
+		channel: notificationChannel,
 	}
 }
 
 func (p *notificationPublisher) Publish(ctx context.Context, data interface{}) error {
-	p.rdb.Publish(ctx, p.channel, data)
-	return nil
+	return p.rdb.Publish(ctx, p.channel, data).Err()
 }

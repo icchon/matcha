@@ -26,7 +26,20 @@ func (r *blockRepository) Create(ctx context.Context, block *entity.Block) error
 		ON CONFLICT (blocker_id, blocked_id) DO NOTHING
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, block).StructScan(block)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if err := stmt.QueryRowxContext(ctx, block).StructScan(block); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// This is not an error in the case of a conflict where nothing is returned.
+			// The block relationship already exists.
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *blockRepository) Delete(ctx context.Context, blockerID, blockedID uuid.UUID) error {

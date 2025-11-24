@@ -24,7 +24,12 @@ func (r *passwordResetRepository) Create(ctx context.Context, passwordReset *ent
 		VALUES (:user_id, :token, :expires_at)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, passwordReset).StructScan(passwordReset)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, passwordReset).StructScan(passwordReset)
 }
 
 func (r *passwordResetRepository) Update(ctx context.Context, passwordReset *entity.PasswordReset) error {

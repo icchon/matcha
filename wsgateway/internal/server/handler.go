@@ -55,6 +55,7 @@ type MessagePayload struct {
 }
 
 func (g *Gateway) ChatMessageHandler(ctx context.Context, message *redis.Message) error {
+	log.Printf("Received chat message: %s", message.Payload)
 	var chatMsg MessagePayload
 	if err := json.Unmarshal([]byte(message.Payload), &chatMsg); err != nil {
 		return err

@@ -71,17 +71,18 @@ func NewServer(
 		log.Printf("Invalid SMTP_PORT: %v", err)
 		return nil
 	}
-	smtpClient := smtp.NewSmtpClient(client.MailConfig{
+	_ = smtp.NewSmtpClient(client.MailConfig{
 		Host:     config.SmtpHost,
 		Port:     port,
 		Username: config.SmtpUsername,
 		Password: config.SmtpPassword,
 		From:     config.SmtpSender,
 	})
+	mockMailClient := smtp.NewMockMailClient()
 	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
 	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
 
-	// notificationPub := publisher.NewNotificationPublisher(rdb)
+	notificationPub := publisher.NewNotificationPublisher(rdb)
 	ackPub := publisher.NewAckPublisher(rdb)
 	presencePub := publisher.NewPresencePublisher(rdb)
 	chatPub := publisher.NewChatPublisher(rdb)
@@ -100,11 +101,11 @@ func NewServer(
 	messageRepository := postgres.NewMessageRepository(db)
 	notificationRepository := postgres.NewNotificationRepository(db)
 
-	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo)
-	mailService := mail.NewApplicationMailService(smtpClient, config.BaseUrl)
+	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, notificationPub)
+	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService)
+	mailService := mail.NewApplicationMailService(mockMailClient, config.BaseUrl)
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
-	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository)
-	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, presencePub)
+	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, notificationService)
 
 	userHandler := handler.NewUserHandler(userService, profileService)
 	sampleHander := handler.NewSampleHandler()
@@ -126,7 +127,7 @@ func NewServer(
 		notificationService,
 	)
 
-	subscriverService := subsvc.NewSubscriberService(presenceSub, chatSub, readSub, subscHandler)
+	subscriverService := subsvc.NewSubscriberService(chatSub, presenceSub, readSub, subscHandler)
 	if err := subscriverService.Initialize(context.Background()); err != nil {
 		log.Printf("Failed to initialize subscriber service: %v", err)
 		return nil
@@ -170,6 +171,7 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 
 		r.Route("/users", func(r chi.Router) {
 			r.Group(func(r chi.Router) {
+				r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
 				r.Route("/{userID}", func(r chi.Router) {
 					r.Post("/like", uh.LikeUserHandler)
 					r.Delete("/like", uh.UnlikeUserHandler)

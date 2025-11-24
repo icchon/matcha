@@ -25,7 +25,12 @@ func (r *userDataRepository) Create(ctx context.Context, userData *entity.UserDa
 		VALUES (:user_id, :latitude, :longitude, :internal_score)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, userData).StructScan(userData)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, userData).StructScan(userData)
 }
 
 func (r *userDataRepository) Update(ctx context.Context, userData *entity.UserData) error {
