@@ -3,6 +3,7 @@ package notice
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/entity"
@@ -46,13 +47,20 @@ func (s *notificationService) CreateAndSendNotofication(ctx context.Context, sen
 	}); err != nil {
 		return nil, err
 	}
-	if err := s.notificationPub.Publish(ctx, client.NotificationPayload{
+
+	payload := client.NotificationPayload{
 		ID:          notification.ID,
 		RecipientID: notification.RecipientID,
 		SenderID:    notification.SenderID.String,
 		Type:        string(notification.Type),
 		CreatedAt:   notification.CreatedAt,
-	}); err != nil {
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.notificationPub.Publish(ctx, payloadBytes); err != nil {
 		return nil, err
 	}
 	return notification, nil

@@ -67,7 +67,12 @@ func (r *refreshTokenRepository) Create(ctx context.Context, refreshToken *entit
 		VALUES (:token_hash, :user_id, :expires_at)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, refreshToken).StructScan(refreshToken)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, refreshToken).StructScan(refreshToken)
 }
 
 func (r *refreshTokenRepository) Update(ctx context.Context, token *entity.RefreshToken) error {

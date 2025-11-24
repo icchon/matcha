@@ -33,7 +33,12 @@ func (r *messageRepository) Create(ctx context.Context, message *entity.Message)
 		VALUES (:sender_id, :recipient_id, :content)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, message).StructScan(message)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, message).StructScan(message)
 }
 
 func (r *messageRepository) Update(ctx context.Context, message *entity.Message) error {

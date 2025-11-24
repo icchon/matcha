@@ -24,7 +24,8 @@ func (r *userTagRepository) Create(ctx context.Context, userTag *entity.UserTag)
 		VALUES (:user_id, :tag_id)
 		ON CONFLICT (user_id, tag_id) DO NOTHING
 	`
-	return r.db.QueryRowxContext(ctx, query, userTag).StructScan(userTag)
+	_, err := r.db.NamedExecContext(ctx, query, userTag)
+	return err
 }
 
 func (r *userTagRepository) Delete(ctx context.Context, userID uuid.UUID, tagID int32) error {

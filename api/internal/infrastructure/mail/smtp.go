@@ -1,4 +1,4 @@
-package infrastructure
+package mail
 
 import (
 	"context"
@@ -43,7 +43,7 @@ func (c *SmtpClient) SendRawEmail(ctx context.Context, toEmail, subject, htmlBod
 		m.AddAlternative("text/plain", textBody)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	_, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	if err := c.dialer.DialAndSend(m); err != nil {

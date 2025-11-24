@@ -25,7 +25,12 @@ func (r *userProfileRepository) Create(ctx context.Context, userProfile *entity.
 		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :biography, :location_name)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, userProfile).StructScan(userProfile)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, userProfile).StructScan(userProfile)
 }
 
 func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.UserProfile) error {

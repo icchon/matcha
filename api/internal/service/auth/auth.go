@@ -228,15 +228,18 @@ func (s *authService) Signup(ctx context.Context, email string, password string)
 	var id uuid.UUID
 	if err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		user := &entity.User{}
+		log.Printf("Creating user for email: %s", email)
 		if err := m.UserRepo().Create(ctx, user); err != nil {
 			return err
 		}
+		log.Printf("User created with ID: %s", user.ID)
 		id = user.ID
 		passwordHash, err := HashPassword(password)
 		if err != nil {
 			log.Printf("password hash error: %v", err)
 			return apperrors.ErrInternalServer
 		}
+		log.Printf("Password hashed for user ID: %s", user.ID)
 		auth := &entity.Auth{
 			UserID:       id,
 			Email:        sql.NullString{String: email, Valid: true},
@@ -244,6 +247,7 @@ func (s *authService) Signup(ctx context.Context, email string, password string)
 			PasswordHash: sql.NullString{String: passwordHash, Valid: true},
 			IsVerified:   false,
 		}
+		log.Printf("Creating auth record for user ID: %s", user.ID)
 		return m.AuthRepo().Create(ctx, auth)
 	}); err != nil {
 		return err

@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"context"
+	"log"
 
 	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/service"
@@ -39,7 +40,10 @@ func NewSubscriberService(
 
 func (s *subscriberService) Initialize(ctx context.Context) error {
 	if err := s.chatSub.SubscribeChannel(ctx, func(ctx context.Context, data interface{}) error {
-		s.subscHandler.ChatSubscHandler(ctx, data.(*client.MessagePayload))
+		if err := s.subscHandler.ChatSubscHandler(ctx, data.(*client.MessagePayload)); err != nil {
+			log.Printf("Error handling chat message: %v", err)
+			return err
+		}
 		return nil
 	}); err != nil {
 		return err

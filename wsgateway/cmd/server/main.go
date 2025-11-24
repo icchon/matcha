@@ -58,7 +58,8 @@ func main() {
 	log.Println("Successfully connected to Redis.")
 
 	conf := &server.ServerConfig{
-		ServerAddr: getEnv("SERVER_ADDR"),
+		ServerAddr:    getEnv("SERVER_ADDR"),
+		JwtSigningKey: getEnv("JWT_SIGNING_KEY"),
 	}
 	srv := server.NewServer(rdb, conf)
 	log.Printf("Starting WebSocket server on %s", conf.ServerAddr)

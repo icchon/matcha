@@ -23,7 +23,12 @@ func (r *pictureRepository) Create(ctx context.Context, picture *entity.Picture)
 		VALUES (:user_id, :url, :is_profile_pic)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, picture).StructScan(picture)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, picture).StructScan(picture)
 }
 
 func (r *pictureRepository) Update(ctx context.Context, picture *entity.Picture) error {

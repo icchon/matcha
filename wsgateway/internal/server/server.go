@@ -12,7 +12,7 @@ import (
 
 type ServerConfig struct {
 	ServerAddr    string
-	jwtSigningKey string
+	JwtSigningKey string
 }
 
 type Server struct {
@@ -31,7 +31,7 @@ func NewServer(rdb *redis.Client, conf *ServerConfig) *Server {
 	mux.Use(middleware.Logger)
 	mux.Use(middleware.Recoverer)
 	mux.Use(middleware.Timeout(60 * time.Second))
-	mux.Use(AuthMiddleware(conf.jwtSigningKey))
+	mux.Use(AuthMiddleware(conf.JwtSigningKey))
 	mux.HandleFunc("/ws", gateway.handleConnections)
 	return &Server{
 		rdb:     rdb,
@@ -42,11 +42,12 @@ func NewServer(rdb *redis.Client, conf *ServerConfig) *Server {
 }
 
 func (s *Server) Start() error {
-	go s.gateway.SubscribeChanel(context.Background(), NotificationChannel, s.gateway.NotificationHandler)
-	go s.gateway.SubscribeChanel(context.Background(), ChatChannnel, s.gateway.ChatMessageHandler)
-	go s.gateway.SubscribeChanel(context.Background(), AckChannel, s.gateway.AckHandler)
-	go s.gateway.SubscribeChanel(context.Background(), PresenceChannel, s.gateway.PresenceHandler)
-	go s.gateway.SubscribeChanel(context.Background(), ReadChannel, s.gateway.ReadHandler)
+	ctx := context.Background()
+	s.gateway.SubscribeChannel(ctx, NotificationChannel, s.gateway.NotificationHandler)
+	s.gateway.SubscribeChannel(ctx, ChatOutgoingChannel, s.gateway.ChatMessageHandler)
+	s.gateway.SubscribeChannel(ctx, AckChannel, s.gateway.AckHandler)
+	s.gateway.SubscribeChannel(ctx, PresenceOutgoingChannel, s.gateway.PresenceHandler)
+	s.gateway.SubscribeChannel(ctx, ReadOutgoingChannel, s.gateway.ReadHandler)
 
 	s.httpServer = &http.Server{
 		Addr:         s.conf.ServerAddr,

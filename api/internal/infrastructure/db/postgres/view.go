@@ -24,7 +24,8 @@ func (r *viewRepository) Create(ctx context.Context, view *entity.View) error {
 		INSERT INTO views (viewer_id, viewed_id, view_time)
 		VALUES (:viewer_id, :viewed_id, :view_time)
 	`
-	return r.db.QueryRowxContext(ctx, query, view).StructScan(view)
+	_, err := r.db.NamedExecContext(ctx, query, view)
+	return err
 }
 
 func (r *viewRepository) Delete(ctx context.Context, viewerID, viewedID uuid.UUID) error {

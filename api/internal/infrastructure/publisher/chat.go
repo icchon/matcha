@@ -6,7 +6,7 @@ import (
 	"github.com/icchon/matcha/api/internal/domain/client"
 )
 
-const chatCannnel string = "chat_channel"
+const chatChannel string = "chat_outgoing"
 
 type chatPublisher struct {
 	rdb     *redis.Client
@@ -18,11 +18,10 @@ var _ client.Publisher = (*chatPublisher)(nil)
 func NewChatPublisher(rdb *redis.Client) *chatPublisher {
 	return &chatPublisher{
 		rdb:     rdb,
-		channel: chatCannnel,
+		channel: chatChannel,
 	}
 }
 
 func (p *chatPublisher) Publish(ctx context.Context, data interface{}) error {
-	p.rdb.Publish(ctx, p.channel, data)
-	return nil
+	return p.rdb.Publish(ctx, p.channel, data).Err()
 }

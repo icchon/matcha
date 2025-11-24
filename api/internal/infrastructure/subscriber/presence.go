@@ -9,7 +9,7 @@ import (
 	"github.com/icchon/matcha/api/internal/domain/client"
 )
 
-const presenceChannel = "presence_channel"
+const presenceChannel = "presence_incoming"
 
 type presenceSubscriber struct {
 	rdb     *redis.Client
@@ -50,7 +50,7 @@ func (s *presenceSubscriber) SubscribeChannel(ctx context.Context, handler func(
 					continue
 				}
 
-				if err := handler(ctx, payload); err != nil {
+				if err := handler(ctx, &payload); err != nil {
 					log.Printf("Error handling message from channel %s: %v", s.channel, err)
 				}
 			}

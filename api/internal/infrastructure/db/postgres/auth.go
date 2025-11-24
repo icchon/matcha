@@ -24,7 +24,12 @@ func (r *authRepository) Create(ctx context.Context, auth *entity.Auth) error {
 		VALUES (:user_id, :provider, :provider_uid, :email, :is_verified, :password_hash)
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, auth).StructScan(auth)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRowxContext(ctx, auth).StructScan(auth)
 }
 
 func (r *authRepository) Update(ctx context.Context, auth *entity.Auth) error {

@@ -23,8 +23,8 @@ type profileService struct {
 
 var _ service.ProfileService = (*profileService)(nil)
 
-func NewProfileService(uow repo.UnitOfWork, profileRepo repo.UserProfileRepository, fileClient client.FileClient, pictureRepo repo.PictureQueryRepository, viewRepo repo.ViewQueryRepository, likeRepo repo.LikeQueryRepository) *profileService {
-	return &profileService{uow: uow, profileRepo: profileRepo, fileClient: fileClient, pictureRepo: pictureRepo, viewRepo: viewRepo, likeRepo: likeRepo}
+func NewProfileService(uow repo.UnitOfWork, profileRepo repo.UserProfileRepository, fileClient client.FileClient, pictureRepo repo.PictureQueryRepository, viewRepo repo.ViewQueryRepository, likeRepo repo.LikeQueryRepository, notifSvc service.NotificationService) *profileService {
+	return &profileService{uow: uow, profileRepo: profileRepo, fileClient: fileClient, pictureRepo: pictureRepo, viewRepo: viewRepo, likeRepo: likeRepo, notifSvc: notifSvc}
 }
 
 func (s *profileService) CreateProfile(ctx context.Context, profile *entity.UserProfile) (*entity.UserProfile, error) {

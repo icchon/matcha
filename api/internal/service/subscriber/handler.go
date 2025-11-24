@@ -2,10 +2,12 @@ package subscriber
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/domain/service"
+	"log"
 	"time"
 )
 
@@ -62,17 +64,23 @@ func (h *subscriberHandler) ReadSubscHandler(ctx context.Context, payload *clien
 	}); err != nil {
 		return err
 	}
-	if err := h.readPub.Publish(ctx, &client.ReadPayload{
+	readPayload := &client.ReadPayload{
 		UserID:      payload.UserID,
 		RecipientID: payload.RecipientID,
 		Timestamp:   payload.Timestamp,
-	}); err != nil {
+	}
+	payloadBytes, err := json.Marshal(readPayload)
+	if err != nil {
+		return err
+	}
+	if err := h.readPub.Publish(ctx, payloadBytes); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (h *subscriberHandler) ChatSubscHandler(ctx context.Context, payload *client.MessagePayload) error {
+	log.Printf("Received message payload: %+v", payload)
 	msg := &entity.Message{
 		SenderID:    payload.SenderID,
 		RecipientID: payload.RecipientID,
@@ -80,27 +88,40 @@ func (h *subscriberHandler) ChatSubscHandler(ctx context.Context, payload *clien
 		SentAt:      payload.SentAt,
 	}
 	if err := h.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		log.Printf("Creating message from %s to %s: %s", msg.SenderID, msg.RecipientID, msg.Content)
 		if err := rm.MessageRepo().Create(ctx, msg); err != nil {
 			return err
 		}
+		log.Printf("Created message with ID %d", msg.ID)
 		return nil
 	}); err != nil {
 		return err
 	}
-	if err := h.ackPub.Publish(ctx, &client.AckPayload{
+	ackPayload := &client.AckPayload{
 		UserID:    msg.SenderID,
 		MessageID: msg.ID,
 		Timestamp: time.Now().UnixMilli(),
-	}); err != nil {
+	}
+	ackBytes, err := json.Marshal(ackPayload)
+	if err != nil {
 		return err
 	}
-	if err := h.chatPub.Publish(ctx, &client.MessagePayload{
+	if err := h.ackPub.Publish(ctx, ackBytes); err != nil {
+		return err
+	}
+
+	chatPayload := &client.MessagePayload{
 		ID:          msg.ID,
 		SenderID:    msg.SenderID,
 		RecipientID: msg.RecipientID,
 		Content:     msg.Content,
 		SentAt:      msg.SentAt,
-	}); err != nil {
+	}
+	chatBytes, err := json.Marshal(chatPayload)
+	if err != nil {
+		return err
+	}
+	if err := h.chatPub.Publish(ctx, chatBytes); err != nil {
 		return err
 	}
 	if _, err := h.notifService.CreateAndSendNotofication(ctx, msg.SenderID, msg.RecipientID, entity.NotifMessage); err != nil {
@@ -119,12 +140,20 @@ func (h *subscriberHandler) PresenceSubscHandler(ctx context.Context, payload *c
 		if err != nil {
 			return err
 		}
-		if err := h.presencePub.Publish(ctx, &client.PresencePayload{
+		presencePayload := &client.PresencePayload{
 			UserID:      payload.UserID,
 			Status:      payload.Status,
 			RecipientID: recipientID,
-		}); err != nil {
-			return err
+		}
+		payloadBytes, err := json.Marshal(presencePayload)
+		if err != nil {
+			// In a loop, maybe just log and continue
+			log.Printf("Error marshalling presence payload: %v", err)
+			continue
+		}
+		if err := h.presencePub.Publish(ctx, payloadBytes); err != nil {
+			log.Printf("Error publishing presence payload: %v", err)
+			// Decide if we should continue or return
 		}
 	}
 	return nil

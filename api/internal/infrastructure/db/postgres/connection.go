@@ -26,7 +26,20 @@ func (r *connectionRepository) Create(ctx context.Context, connection *entity.Co
 		ON CONFLICT (user1_id, user2_id) DO NOTHING
 		RETURNING *
 	`
-	return r.db.QueryRowxContext(ctx, query, connection).StructScan(connection)
+	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if err := stmt.QueryRowxContext(ctx, connection).StructScan(connection); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// This is not an error in the case of a conflict where nothing is returned.
+			// The connection already exists.
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *connectionRepository) Delete(ctx context.Context, user1ID, user2ID uuid.UUID) error {
