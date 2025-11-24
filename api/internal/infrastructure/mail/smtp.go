@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-mail/mail"
-	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/domain/client"
 	"log"
 	"time"
 )
@@ -14,9 +14,9 @@ type SmtpClient struct {
 	from   string
 }
 
-var _ repo.MailClient = (*SmtpClient)(nil)
+var _ client.MailClient = (*SmtpClient)(nil)
 
-func NewSmtpClient(cfg repo.MailConfig) *SmtpClient {
+func NewSmtpClient(cfg client.MailConfig) *SmtpClient {
 	d := mail.NewDialer(
 		cfg.Host,
 		cfg.Port,

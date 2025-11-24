@@ -10,7 +10,6 @@ import (
 	"github.com/icchon/matcha/api/internal/apperrors"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 	"github.com/icchon/matcha/api/internal/mock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -18,9 +17,9 @@ import (
 
 // Re-defining mock helpers as they are not in a shared file.
 
-// mockPictureRepositoryManager is a mock for uow.RepositoryManager.
+// mockPictureRepositoryManager is a mock for repo.RepositoryManager.
 type mockPictureRepositoryManager struct {
-	uow.RepositoryManager
+	repo.RepositoryManager
 	pictureRepo repo.PictureRepository
 }
 
@@ -28,13 +27,13 @@ func (m *mockPictureRepositoryManager) PictureRepo() repo.PictureRepository {
 	return m.pictureRepo
 }
 
-// mockPictureUow is a mock for uow.UnitOfWork for testing services.
+// mockPictureUow is a mock for repo.UnitOfWork for testing services.
 type mockPictureUow struct {
-	rm  uow.RepositoryManager
+	rm  repo.RepositoryManager
 	err error
 }
 
-func (u *mockPictureUow) Do(ctx context.Context, fn func(rm uow.RepositoryManager) error) error {
+func (u *mockPictureUow) Do(ctx context.Context, fn func(rm repo.RepositoryManager) error) error {
 	if u.err != nil {
 		return u.err
 	}

@@ -34,12 +34,12 @@ func (g *Gateway) NotificationHandler(ctx context.Context, message *redis.Messag
 	}
 
 	data := ClientMessage{
-		Type:    AckEvent,
+		Type:    NotificationEvent,
 		Payload: json.RawMessage(message.Payload),
 	}
 	if err := conn.WriteJSON(data); err != nil {
 		log.Printf("Push failed for user %s: %v", userID, err)
-		g.deregisterConnection(userID, conn)
+		g.deregisterConnection(ctx, userID, conn)
 	} else {
 		log.Printf("Successfully pushed notification to user %s.", userID)
 	}
@@ -77,7 +77,7 @@ func (g *Gateway) ChatMessageHandler(ctx context.Context, message *redis.Message
 
 	if err := conn.WriteJSON(data); err != nil {
 		log.Printf("Chat message push failed for user %s: %v", recipientID, err)
-		g.deregisterConnection(recipientID, conn)
+		g.deregisterConnection(ctx, recipientID, conn)
 	} else {
 		log.Printf("Successfully pushed chat message to user %s.", recipientID)
 	}
@@ -111,9 +111,77 @@ func (g *Gateway) AckHandler(ctx context.Context, message *redis.Message) error 
 	}
 	if err := conn.WriteJSON(data); err != nil {
 		log.Printf("Ack push failed for user %s: %v", userID, err)
-		g.deregisterConnection(userID, conn)
+		g.deregisterConnection(ctx, userID, conn)
 	} else {
 		log.Printf("Successfully pushed ack to user %s.", userID)
+	}
+	return nil
+}
+
+type PresencePayload struct {
+	UserID      uuid.UUID `json:"user_id"`
+	RecipientID uuid.UUID `json:"recipient_id"`
+	Status      string    `json:"status"`
+}
+
+func (g *Gateway) PresenceHandler(ctx context.Context, message *redis.Message) error {
+	var presence PresencePayload
+	if err := json.Unmarshal([]byte(message.Payload), &presence); err != nil {
+		return err
+	}
+	recipientID := presence.RecipientID
+
+	g.mutex.RLock()
+	conn, ok := g.connections[recipientID]
+	g.mutex.RUnlock()
+
+	if !ok {
+		log.Printf("Presence: User %s not connected (offline).", recipientID)
+		return nil
+	}
+	data := ClientMessage{
+		Type:    PresenceEvent,
+		Payload: json.RawMessage(message.Payload),
+	}
+	if err := conn.WriteJSON(data); err != nil {
+		log.Printf("Presence push failed for user %s: %v", recipientID, err)
+		g.deregisterConnection(ctx, recipientID, conn)
+	} else {
+		log.Printf("Successfully pushed presence to user %s.", recipientID)
+	}
+	return nil
+}
+
+type ReadPayload struct {
+	UserID      uuid.UUID `json:"user_id"`
+	RecipientID uuid.UUID `json:"recipient_id"`
+	Timestamp   int64     `json:"timestamp"`
+}
+
+func (g *Gateway) ReadHandler(ctx context.Context, message *redis.Message) error {
+	var read ReadPayload
+	if err := json.Unmarshal([]byte(message.Payload), &read); err != nil {
+		return err
+	}
+	recipientID := read.RecipientID
+
+	g.mutex.RLock()
+	conn, ok := g.connections[recipientID]
+	g.mutex.RUnlock()
+
+	if !ok {
+		log.Printf("Read: User %s not connected (offline).", recipientID)
+		return nil
+	}
+	data := ClientMessage{
+		Type:    ReadEvent,
+		Payload: json.RawMessage(message.Payload),
+	}
+	if err := conn.WriteJSON(data); err != nil {
+		log.Printf("Read push failed for user %s: %v", recipientID, err)
+		g.deregisterConnection(ctx, recipientID, conn)
+	} else {
+		log.Printf("Successfully pushed read to user %s.", recipientID)
 	}
 	return nil
 }

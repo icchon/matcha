@@ -6,7 +6,7 @@
 | ---- | ------- | ------- | ---- |
 | [public.users](public.users.md) | 3 |  | BASE TABLE |
 | [public.user_data](public.user_data.md) | 4 |  | BASE TABLE |
-| [public.auths](public.auths.md) | 4 |  | BASE TABLE |
+| [public.auths](public.auths.md) | 7 |  | BASE TABLE |
 | [public.verification_tokens](public.verification_tokens.md) | 3 |  | BASE TABLE |
 | [public.password_resets](public.password_resets.md) | 3 |  | BASE TABLE |
 | [public.user_profiles](public.user_profiles.md) | 9 |  | BASE TABLE |
@@ -19,6 +19,7 @@
 | [public.blocks](public.blocks.md) | 2 |  | BASE TABLE |
 | [public.notifications](public.notifications.md) | 6 |  | BASE TABLE |
 | [public.messages](public.messages.md) | 6 |  | BASE TABLE |
+| [public.refresh_tokens](public.refresh_tokens.md) | 5 |  | BASE TABLE |
 
 ## Stored procedures and functions
 

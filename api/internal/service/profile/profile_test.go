@@ -10,17 +10,16 @@ import (
 	"github.com/icchon/matcha/api/internal/apperrors"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 	"github.com/icchon/matcha/api/internal/mock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
-// mockRepositoryManager is a mock for uow.RepositoryManager.
+// mockRepositoryManager is a mock for repo.RepositoryManager.
 type mockRepositoryManager struct {
-	uow.RepositoryManager // Embed interface to avoid implementing all methods
-	profileRepo           repo.UserProfileRepository
-	viewRepo              repo.ViewRepository
+	repo.RepositoryManager // Embed interface to avoid implementing all methods
+	profileRepo            repo.UserProfileRepository
+	viewRepo               repo.ViewRepository
 }
 
 func (m *mockRepositoryManager) ProfileRepo() repo.UserProfileRepository {
@@ -31,13 +30,13 @@ func (m *mockRepositoryManager) ViewRepo() repo.ViewRepository {
 	return m.viewRepo
 }
 
-// mockUow is a mock for uow.UnitOfWork for testing services.
+// mockUow is a mock for repo.UnitOfWork for testing services.
 type mockUow struct {
-	rm  uow.RepositoryManager
+	rm  repo.RepositoryManager
 	err error
 }
 
-func (u *mockUow) Do(ctx context.Context, fn func(rm uow.RepositoryManager) error) error {
+func (u *mockUow) Do(ctx context.Context, fn func(rm repo.RepositoryManager) error) error {
 	if u.err != nil {
 		return u.err
 	}

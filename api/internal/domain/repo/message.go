@@ -24,6 +24,7 @@ type MessageQueryRepository interface {
 type MessageCommandRepository interface {
 	Create(ctx context.Context, message *entity.Message) error
 	Update(ctx context.Context, message *entity.Message) error
+	MarkAsRead(ctx context.Context, messageID int64) error
 	Delete(ctx context.Context, messageID int64) error
 }
 

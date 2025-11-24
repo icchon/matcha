@@ -3,19 +3,20 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"log"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/apperrors"
+	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/domain/service"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 	"golang.org/x/crypto/bcrypt"
-	"log"
-	"time"
 )
 
 type authService struct {
-	uow               uow.UnitOfWork
+	uow               repo.UnitOfWork
 	authRepo          repo.AuthQueryRepository
 	userRepo          repo.UserQueryRepository
 	refreshTokenRepo  repo.RefreshTokenQueryRepository
@@ -24,21 +25,21 @@ type authService struct {
 	hmacSecretKey     string
 	jwtSigningKey     string
 	mailService       service.MailService
-	googleClient      repo.OAuthClient
-	githubClient      repo.OAuthClient
+	googleClient      client.OAuthClient
+	githubClient      client.OAuthClient
 }
 
 var _ service.AuthService = (*authService)(nil)
 
 func NewAuthService(
-	uow uow.UnitOfWork,
+	uow repo.UnitOfWork,
 	authRepo repo.AuthQueryRepository,
 	userRepo repo.UserQueryRepository,
 	refreshTokenRepo repo.RefreshTokenQueryRepository,
 	passwordResetRepo repo.PasswordResetQueryRepository,
 	verificationRepo repo.VerificationTokenQueryRepository,
-	googleClient repo.OAuthClient,
-	githubClient repo.OAuthClient,
+	googleClient client.OAuthClient,
+	githubClient client.OAuthClient,
 	mailService service.MailService,
 	hmacSecretKey string,
 	jwtSigningKey string,
@@ -59,7 +60,7 @@ func NewAuthService(
 }
 
 func (s *authService) LoginOAuth(ctx context.Context, code string, codeVerifier string, provider entity.AuthProvider) (a *entity.Auth, access string, refresh string, e error) {
-	var oauthInfo *repo.OAuthInfo
+	var oauthInfo *client.OAuthInfo
 	var err error
 	switch provider {
 	case entity.ProviderGoogle:
@@ -87,7 +88,7 @@ func (s *authService) LoginOAuth(ctx context.Context, code string, codeVerifier 
 
 	var auth *entity.Auth
 	if len(authes) == 0 {
-		err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 			user := &entity.User{}
 			if err := m.UserRepo().Create(ctx, user); err != nil {
 				return err
@@ -134,7 +135,7 @@ func (s *authService) ConfirmPassword(ctx context.Context, token string, passwor
 		return apperrors.ErrNotFound
 	}
 	auth.PasswordHash = sql.NullString{String: passwordHash, Valid: true}
-	return s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		if err := m.AuthRepo().Update(ctx, auth); err != nil {
 			return err
 		}
@@ -155,7 +156,7 @@ func (s *authService) SendPasswordResetEmail(ctx context.Context, email string) 
 		return apperrors.ErrNotFound
 	}
 	token := GenerateEmailToken()
-	if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		passwordReset := &entity.PasswordReset{
 			UserID:    auth[0].UserID,
 			Token:     token,
@@ -188,7 +189,7 @@ func (s *authService) VerifyEmail(ctx context.Context, token string) error {
 		return apperrors.ErrNotFound
 	}
 	auth.IsVerified = true
-	return s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		if err := m.VerificationTokenRepo().Delete(ctx, token); err != nil {
 			return err
 		}
@@ -225,7 +226,7 @@ func (s *authService) Signup(ctx context.Context, email string, password string)
 	}
 
 	var id uuid.UUID
-	if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		user := &entity.User{}
 		if err := m.UserRepo().Create(ctx, user); err != nil {
 			return err
@@ -261,14 +262,14 @@ func (s *authService) IssueEMailToken(ctx context.Context, userID uuid.UUID) (st
 	} else if len(tokens) == 1 {
 		tokens[0].ExpiresAt = time.Now().Add(time.Hour)
 		tokens[0].Token = token
-		if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		if err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 			m.VerificationTokenRepo().Update(ctx, tokens[0])
 			return nil
 		}); err != nil {
 			return "", err
 		}
 	} else if len(tokens) == 0 {
-		if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+		if err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 			verificationToken := &entity.VerificationToken{
 				UserID:    userID,
 				Token:     token,
@@ -336,7 +337,7 @@ func (s *authService) Logout(ctx context.Context, userID uuid.UUID) error {
 		Time: time.Now(),
 	}
 
-	return s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		if err := m.RefreshTokenRepo().Update(ctx, refreshToken[0]); err != nil {
 			return err
 		}
@@ -364,7 +365,7 @@ func (s *authService) IssueAccessToken(ctx context.Context, oldRefreshToken stri
 func (s *authService) IssueRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) {
 	refreshToken := GenerateRefreshToken()
 	refreshTokenHash := HashTokenWithHMAC(refreshToken, s.hmacSecretKey)
-	if err := s.uow.Do(ctx, func(m uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(m repo.RepositoryManager) error {
 		refreshToken := &entity.RefreshToken{
 			UserID:    userID,
 			TokenHash: refreshTokenHash,

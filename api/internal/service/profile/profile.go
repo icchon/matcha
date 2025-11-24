@@ -5,29 +5,30 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/apperrors"
+	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/domain/service"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 )
 
 type profileService struct {
-	uow         uow.UnitOfWork
+	uow         repo.UnitOfWork
 	profileRepo repo.UserProfileRepository
 	pictureRepo repo.PictureQueryRepository
 	viewRepo    repo.ViewQueryRepository
 	likeRepo    repo.LikeQueryRepository
-	fileClient  repo.FileClient
+	notifSvc    service.NotificationService
+	fileClient  client.FileClient
 }
 
 var _ service.ProfileService = (*profileService)(nil)
 
-func NewProfileService(uow uow.UnitOfWork, profileRepo repo.UserProfileRepository, fileClient repo.FileClient, pictureRepo repo.PictureQueryRepository, viewRepo repo.ViewQueryRepository, likeRepo repo.LikeQueryRepository) *profileService {
+func NewProfileService(uow repo.UnitOfWork, profileRepo repo.UserProfileRepository, fileClient client.FileClient, pictureRepo repo.PictureQueryRepository, viewRepo repo.ViewQueryRepository, likeRepo repo.LikeQueryRepository) *profileService {
 	return &profileService{uow: uow, profileRepo: profileRepo, fileClient: fileClient, pictureRepo: pictureRepo, viewRepo: viewRepo, likeRepo: likeRepo}
 }
 
 func (s *profileService) CreateProfile(ctx context.Context, profile *entity.UserProfile) (*entity.UserProfile, error) {
-	if err := s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		return rm.ProfileRepo().Create(ctx, profile)
 	}); err != nil {
 		return nil, apperrors.ErrInternalServer
@@ -68,7 +69,7 @@ func (s *profileService) UpdateProfile(ctx context.Context, userID uuid.UUID, pr
 		}
 	}
 
-	if err := s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		return rm.ProfileRepo().Update(ctx, target)
 	}); err != nil {
 		return nil, apperrors.ErrInternalServer
@@ -88,13 +89,19 @@ func (s *profileService) FindProfile(ctx context.Context, userID uuid.UUID) (*en
 }
 
 func (s *profileService) VeiwProfile(ctx context.Context, viewerID, viewedID uuid.UUID) error {
-	return s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		view := &entity.View{
 			ViewerID: viewerID,
 			ViewedID: viewedID,
 		}
 		return rm.ViewRepo().Create(ctx, view)
-	})
+	}); err != nil {
+		return err
+	}
+	if _, err := s.notifSvc.CreateAndSendNotofication(ctx, viewerID, viewedID, entity.NotifView); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *profileService) FindWhoViewedMeList(ctx context.Context, userID uuid.UUID) ([]*entity.View, error) {

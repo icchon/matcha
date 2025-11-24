@@ -4,23 +4,6 @@ import (
 	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
-type RepositoryManager interface {
-	UserRepo() repo.UserRepository
-	AuthRepo() repo.AuthRepository
-	ConnectionRepo() repo.ConnectionRepository
-	MessageRepo() repo.MessageRepository
-	NotificationRepo() repo.NotificationRepository
-	PasswordResetRepo() repo.PasswordResetRepository
-	PictureRepo() repo.PictureRepository
-	RefreshTokenRepo() repo.RefreshTokenRepository
-	UserTagRepo() repo.UserTagRepository
-	VerificationTokenRepo() repo.VerificationTokenRepository
-	ProfileRepo() repo.UserProfileRepository
-	ViewRepo() repo.ViewRepository
-	LikeRepo() repo.LikeRepository
-	BlockRepo() repo.BlockRepository
-}
-
 type repositoryManager struct {
 	userRepo              repo.UserRepository
 	authRepo              repo.AuthRepository
@@ -53,7 +36,7 @@ func NewRepositoryManager(
 	viewRepo repo.ViewRepository,
 	likeRepo repo.LikeRepository,
 	blockRepo repo.BlockRepository,
-) RepositoryManager {
+) repo.RepositoryManager {
 	return &repositoryManager{
 		userRepo:              userRepo,
 		authRepo:              authRepo,

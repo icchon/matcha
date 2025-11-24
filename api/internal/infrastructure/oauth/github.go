@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"context"
-	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/domain/client"
 )
 
 type githubClient struct {
@@ -11,7 +11,7 @@ type githubClient struct {
 	githubRedirectURL  string
 }
 
-var _ repo.OAuthClient = (*githubClient)(nil)
+var _ client.OAuthClient = (*githubClient)(nil)
 
 func NewGithubClient(githubClientID, githubClientSecret, githubRedirectURL string) *githubClient {
 	return &githubClient{
@@ -21,6 +21,6 @@ func NewGithubClient(githubClientID, githubClientSecret, githubRedirectURL strin
 	}
 }
 
-func (h *githubClient) ExchangeCode(ctx context.Context, code string, codeVerifer string) (*repo.OAuthInfo, error) {
+func (h *githubClient) ExchangeCode(ctx context.Context, code string, codeVerifer string) (*client.OAuthInfo, error) {
 	return nil, nil
 }

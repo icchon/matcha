@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 	// "github.com/icchon/matcha/api/internal/domain/entity"
-	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/service"
 )
 
 type applicationMailService struct {
-	mailClient repo.MailClient
+	mailClient client.MailClient
 	baseURL    string
 }
 
 var _ service.MailService = (*applicationMailService)(nil)
 
-func NewApplicationMailService(client repo.MailClient, baseURL string) *applicationMailService {
+func NewApplicationMailService(client client.MailClient, baseURL string) *applicationMailService {
 	return &applicationMailService{
 		mailClient: client,
 		baseURL:    baseURL,

@@ -21,6 +21,16 @@ services:
     #   - "6379:6379" 
     restart: always
   
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      - redis
+  
   wsgateway:
     build:
       context: ./wsgateway
@@ -57,7 +67,7 @@ services:
     image: adminer
     restart: always
     ports:
-      - "8080:80"
+      - "8080:8080"
   
   nginx:
     container_name: nginx
