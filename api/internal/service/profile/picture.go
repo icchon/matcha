@@ -3,11 +3,11 @@ package profile
 import (
 	"context"
 	"database/sql"
+
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/apperrors"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 )
 
 func (s *profileService) DeletePicture(ctx context.Context, pictureID int32, userID uuid.UUID) error {
@@ -18,7 +18,7 @@ func (s *profileService) DeletePicture(ctx context.Context, pictureID int32, use
 	if picture == nil || picture.UserID != userID {
 		return apperrors.ErrNotFound
 	}
-	return s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		return rm.PictureRepo().Delete(ctx, pictureID)
 	})
 }
@@ -39,7 +39,7 @@ func (s *profileService) UpdatePictureStatus(ctx context.Context, userID uuid.UU
 	if pictures == nil {
 		return apperrors.ErrNotFound
 	}
-	return s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		for _, pic := range pictures {
 			if isProfilePic {
 				if pic.ID == pictureID {
@@ -84,7 +84,7 @@ func (s *profileService) UploadPicture(ctx context.Context, userID uuid.UUID, im
 		URL:          url,
 		IsProfilePic: sql.NullBool{Bool: false, Valid: true},
 	}
-	if err := s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		return rm.PictureRepo().Create(ctx, picture)
 	}); err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *profileService) UploadPicutures(ctx context.Context, userID uuid.UUID, 
 		urls = append(urls, url)
 	}
 	var pictures []*entity.Picture
-	if err := s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		for _, url := range urls {
 			pic := &entity.Picture{
 				UserID:       userID,

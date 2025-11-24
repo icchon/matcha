@@ -12,9 +12,9 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/icchon/matcha/api/internal/server"
 )
@@ -100,7 +100,7 @@ func main() {
 	defer rdb.Close()
 	log.Println("Successfully connected to Redis.")
 
-	srv := server.NewServer(db, cfg)
+	srv := server.NewServer(db, rdb, cfg)
 	if srv == nil {
 		log.Fatalf("Faild to setup server")
 	}

@@ -2,23 +2,24 @@ package user
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/domain/service"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
 )
 
 type userService struct {
-	uow            uow.UnitOfWork
+	uow            repo.UnitOfWork
 	likeRepo       repo.LikeQueryRepository
 	viewRepo       repo.ViewQueryRepository
 	connectionRepo repo.ConnectionQueryRepository
+	notifSvc       service.NotificationService
 }
 
 var _ service.UserService = (*userService)(nil)
 
-func NewUserService(uow uow.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository) service.UserService {
+func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository) service.UserService {
 	return &userService{
 		uow:            uow,
 		likeRepo:       likeRepo,
@@ -28,7 +29,7 @@ func NewUserService(uow uow.UnitOfWork, likeRepo repo.LikeQueryRepository, viewR
 }
 
 func (u *userService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	return u.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	return u.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		if err := rm.UserRepo().Delete(ctx, userID); err != nil {
 			return err
 		}
@@ -38,7 +39,7 @@ func (u *userService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 
 // conection, like, view delete
 func (s *userService) BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
-	return s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		if err := rm.ConnectionRepo().Delete(ctx, blockerID, blockedID); err != nil {
 			return err
 		}
@@ -66,7 +67,7 @@ func (s *userService) BlockUser(ctx context.Context, blockerID, blockedID uuid.U
 }
 
 func (s *userService) UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
-	return s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		if err := rm.BlockRepo().Delete(ctx, blockerID, blockedID); err != nil {
 			return err
 		}
@@ -77,7 +78,7 @@ func (s *userService) UnblockUser(ctx context.Context, blockerID, blockedID uuid
 func (s *userService) FindBlockList(ctx context.Context, userID uuid.UUID) ([]*entity.Block, error) {
 	var blocks []*entity.Block
 	var err error
-	if err := s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		blocks, err = rm.BlockRepo().Query(ctx, &repo.BlockQuery{BlockerID: &userID})
 		if err != nil {
 			return err
@@ -96,7 +97,7 @@ func (s *userService) LikeUser(ctx context.Context, likerID, likedID uuid.UUID) 
 	}
 	love := (like != nil)
 	var connection *entity.Connection
-	if err := s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		like := &entity.Like{
 			LikerID: likerID,
 			LikedID: likedID,
@@ -117,11 +118,22 @@ func (s *userService) LikeUser(ctx context.Context, likerID, likedID uuid.UUID) 
 	}); err != nil {
 		return nil, err
 	}
+	if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likerID, likedID, entity.NotifLike); err != nil {
+		return nil, err
+	}
+	if love {
+		if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likerID, likedID, entity.NotifMatch); err != nil {
+			return nil, err
+		}
+		if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likedID, likerID, entity.NotifMatch); err != nil {
+			return nil, err
+		}
+	}
 	return connection, nil
 }
 
 func (s *userService) UnlikeUser(ctx context.Context, likerID, likedID uuid.UUID) error {
-	return s.uow.Do(ctx, func(rm uow.RepositoryManager) error {
+	if err := s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		if err := rm.LikeRepo().Delete(ctx, likerID, likedID); err != nil {
 			return err
 		}
@@ -129,7 +141,13 @@ func (s *userService) UnlikeUser(ctx context.Context, likerID, likedID uuid.UUID
 			return err
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likerID, likedID, entity.NotifUnlike); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *userService) FindMyLikedList(ctx context.Context, userID uuid.UUID) ([]*entity.Like, error) {

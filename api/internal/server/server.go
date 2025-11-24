@@ -12,17 +12,22 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/go-redis/redis/v8"
+	"github.com/icchon/matcha/api/internal/domain/client"
+	"github.com/icchon/matcha/api/internal/infrastructure/db/postgres"
+	"github.com/icchon/matcha/api/internal/infrastructure/db/uow"
 	"github.com/icchon/matcha/api/internal/infrastructure/file"
 	smtp "github.com/icchon/matcha/api/internal/infrastructure/mail"
 	"github.com/icchon/matcha/api/internal/infrastructure/oauth"
-	"github.com/icchon/matcha/api/internal/infrastructure/postgres"
-	"github.com/icchon/matcha/api/internal/infrastructure/uow"
+	"github.com/icchon/matcha/api/internal/infrastructure/publisher"
+	"github.com/icchon/matcha/api/internal/infrastructure/subscriber"
 	"github.com/icchon/matcha/api/internal/presentation/handler"
 	appmiddleware "github.com/icchon/matcha/api/internal/presentation/middleware"
 	"github.com/icchon/matcha/api/internal/service/auth"
 	"github.com/icchon/matcha/api/internal/service/mail"
+	"github.com/icchon/matcha/api/internal/service/notice"
 	"github.com/icchon/matcha/api/internal/service/profile"
+	subsvc "github.com/icchon/matcha/api/internal/service/subscriber"
 	"github.com/icchon/matcha/api/internal/service/user"
 )
 
@@ -47,7 +52,6 @@ type Config struct {
 }
 
 type Server struct {
-	db     *sqlx.DB
 	router *chi.Mux
 
 	config     *Config
@@ -56,6 +60,7 @@ type Server struct {
 
 func NewServer(
 	db *sqlx.DB,
+	rdb *redis.Client,
 	config *Config,
 ) *Server {
 	unitOfWork := uow.NewUnitOfWork(db)
@@ -66,7 +71,7 @@ func NewServer(
 		log.Printf("Invalid SMTP_PORT: %v", err)
 		return nil
 	}
-	smtpClient := smtp.NewSmtpClient(repo.MailConfig{
+	smtpClient := smtp.NewSmtpClient(client.MailConfig{
 		Host:     config.SmtpHost,
 		Port:     port,
 		Username: config.SmtpUsername,
@@ -75,6 +80,12 @@ func NewServer(
 	})
 	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
 	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
+
+	// notificationPub := publisher.NewNotificationPublisher(rdb)
+	ackPub := publisher.NewAckPublisher(rdb)
+	presencePub := publisher.NewPresencePublisher(rdb)
+	chatPub := publisher.NewChatPublisher(rdb)
+	readPub := publisher.NewReadPublisher(rdb)
 
 	userRepository := postgres.NewUserRepository(db)
 	authRepository := postgres.NewAuthRepository(db)
@@ -86,21 +97,44 @@ func NewServer(
 	connectionRepo := postgres.NewConnectionRepository(db)
 	profileRepository := postgres.NewUserProfileRepository(db)
 	pictureRepository := postgres.NewPictureRepository(db)
+	messageRepository := postgres.NewMessageRepository(db)
+	notificationRepository := postgres.NewNotificationRepository(db)
 
 	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo)
 	mailService := mail.NewApplicationMailService(smtpClient, config.BaseUrl)
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
 	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository)
+	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, presencePub)
 
 	userHandler := handler.NewUserHandler(userService, profileService)
 	sampleHander := handler.NewSampleHandler()
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 
+	presenceSub := subscriber.NewPresenceSubscriber(rdb)
+	chatSub := subscriber.NewchatSubscriber(rdb)
+	readSub := subscriber.NewreadSubscriber(rdb)
+
+	subscHandler := subsvc.NewSubscriberHandler(
+		unitOfWork,
+		messageRepository,
+		readPub,
+		ackPub,
+		chatPub,
+		presencePub,
+		userService,
+		notificationService,
+	)
+
+	subscriverService := subsvc.NewSubscriberService(presenceSub, chatSub, readSub, subscHandler)
+	if err := subscriverService.Initialize(context.Background()); err != nil {
+		log.Printf("Failed to initialize subscriber service: %v", err)
+		return nil
+	}
+
 	mux := chi.NewRouter()
 
 	server := &Server{
-		db:     db,
 		router: mux,
 		config: config,
 	}

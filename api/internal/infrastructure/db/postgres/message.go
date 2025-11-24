@@ -17,6 +17,16 @@ func NewMessageRepository(db DBTX) repo.MessageRepository {
 	return &messageRepository{db: db}
 }
 
+func (r *messageRepository) MarkAsRead(ctx context.Context, messageID int64) error {
+	query := `
+		UPDATE messages SET
+			is_read = TRUE
+		WHERE id = $1
+	`
+	_, err := r.db.ExecContext(ctx, query, messageID)
+	return err
+}
+
 func (r *messageRepository) Create(ctx context.Context, message *entity.Message) error {
 	query := `
 		INSERT INTO messages (sender_id, recipient_id, content)

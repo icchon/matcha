@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/domain/client"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
@@ -35,7 +35,7 @@ type GoogleClaims struct {
 	Locale     string `json:"locale"`
 }
 
-var _ repo.OAuthClient = (*googleClient)(nil)
+var _ client.OAuthClient = (*googleClient)(nil)
 
 func NewGoogleClient(googleClientID string, googleClientSecret string, googleRedirectURL string) *googleClient {
 	return &googleClient{
@@ -45,7 +45,7 @@ func NewGoogleClient(googleClientID string, googleClientSecret string, googleRed
 	}
 }
 
-func (c *googleClient) ExchangeCode(ctx context.Context, code string, codeVerifier string) (*repo.OAuthInfo, error) {
+func (c *googleClient) ExchangeCode(ctx context.Context, code string, codeVerifier string) (*client.OAuthInfo, error) {
 	conf := &oauth2.Config{
 		ClientID:     c.googleClientID,
 		ClientSecret: c.googleClientSecret,
@@ -83,7 +83,7 @@ func (c *googleClient) ExchangeCode(ctx context.Context, code string, codeVerifi
 		return nil, fmt.Errorf("構造体へのアンマーシャリング失敗: %w", err)
 	}
 
-	return &repo.OAuthInfo{
+	return &client.OAuthInfo{
 		Sub:           claims.Sub,
 		Iss:           claims.Iss,
 		Email:         claims.Email,

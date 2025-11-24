@@ -2,23 +2,22 @@ package uow
 
 import (
 	"context"
-	"github.com/icchon/matcha/api/internal/infrastructure/postgres"
+	"github.com/icchon/matcha/api/internal/domain/repo"
+	"github.com/icchon/matcha/api/internal/infrastructure/db/postgres"
 	"github.com/jmoiron/sqlx"
 )
-
-type UnitOfWork interface {
-	Do(ctx context.Context, fn func(m RepositoryManager) error) error
-}
 
 type unitOfWork struct {
 	db *sqlx.DB
 }
 
-func NewUnitOfWork(db *sqlx.DB) UnitOfWork {
+var _ repo.UnitOfWork = (*unitOfWork)(nil)
+
+func NewUnitOfWork(db *sqlx.DB) *unitOfWork {
 	return &unitOfWork{db: db}
 }
 
-func (u *unitOfWork) Do(ctx context.Context, fn func(m RepositoryManager) error) error {
+func (u *unitOfWork) Do(ctx context.Context, fn func(m repo.RepositoryManager) error) error {
 	tx, err := u.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
