@@ -26,6 +26,7 @@
 | Name | Definition |
 | ---- | ---------- |
 | messages_pkey | CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id) |
+| idx_messages_chat_history | CREATE INDEX idx_messages_chat_history ON public.messages USING btree (sender_id, recipient_id, sent_at) |
 
 ## Relations
 

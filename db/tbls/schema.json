@@ -122,9 +122,15 @@
       "type": "BASE TABLE",
       "columns": [
         {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('auths_id_seq'::regclass)"
+        },
+        {
           "name": "user_id",
           "type": "uuid",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "provider",
@@ -134,7 +140,18 @@
         {
           "name": "provider_uid",
           "type": "varchar(255)",
-          "nullable": false
+          "nullable": true
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "is_verified",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false"
         },
         {
           "name": "password_hash",
@@ -145,11 +162,37 @@
       "indexes": [
         {
           "name": "auths_pkey",
-          "def": "CREATE UNIQUE INDEX auths_pkey ON public.auths USING btree (provider, provider_uid)",
+          "def": "CREATE UNIQUE INDEX auths_pkey ON public.auths USING btree (id)",
+          "table": "public.auths",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "auths_user_id_provider_key",
+          "def": "CREATE UNIQUE INDEX auths_user_id_provider_key ON public.auths USING btree (user_id, provider)",
+          "table": "public.auths",
+          "columns": [
+            "user_id",
+            "provider"
+          ]
+        },
+        {
+          "name": "auths_provider_provider_uid_key",
+          "def": "CREATE UNIQUE INDEX auths_provider_provider_uid_key ON public.auths USING btree (provider, provider_uid)",
           "table": "public.auths",
           "columns": [
             "provider",
             "provider_uid"
+          ]
+        },
+        {
+          "name": "auths_provider_email_key",
+          "def": "CREATE UNIQUE INDEX auths_provider_email_key ON public.auths USING btree (provider, email)",
+          "table": "public.auths",
+          "columns": [
+            "provider",
+            "email"
           ]
         }
       ],
@@ -170,12 +213,44 @@
         {
           "name": "auths_pkey",
           "type": "PRIMARY KEY",
-          "def": "PRIMARY KEY (provider, provider_uid)",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.auths",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "auths_user_id_provider_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (user_id, provider)",
+          "table": "public.auths",
+          "referenced_table": "",
+          "columns": [
+            "user_id",
+            "provider"
+          ]
+        },
+        {
+          "name": "auths_provider_provider_uid_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (provider, provider_uid)",
           "table": "public.auths",
           "referenced_table": "",
           "columns": [
             "provider",
             "provider_uid"
+          ]
+        },
+        {
+          "name": "auths_provider_email_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (provider, email)",
+          "table": "public.auths",
+          "referenced_table": "",
+          "columns": [
+            "provider",
+            "email"
           ]
         }
       ]
@@ -1043,6 +1118,16 @@
           "columns": [
             "id"
           ]
+        },
+        {
+          "name": "idx_messages_chat_history",
+          "def": "CREATE INDEX idx_messages_chat_history ON public.messages USING btree (sender_id, recipient_id, sent_at)",
+          "table": "public.messages",
+          "columns": [
+            "sender_id",
+            "recipient_id",
+            "sent_at"
+          ]
         }
       ],
       "constraints": [
@@ -1083,6 +1168,74 @@
           ]
         }
       ]
+    },
+    {
+      "name": "public.refresh_tokens",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "token_hash",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "revoked",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "refresh_tokens_pkey",
+          "def": "CREATE UNIQUE INDEX refresh_tokens_pkey ON public.refresh_tokens USING btree (token_hash)",
+          "table": "public.refresh_tokens",
+          "columns": [
+            "token_hash"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "refresh_tokens_user_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.refresh_tokens",
+          "referenced_table": "users",
+          "columns": [
+            "user_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "refresh_tokens_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (token_hash)",
+          "table": "public.refresh_tokens",
+          "referenced_table": "",
+          "columns": [
+            "token_hash"
+          ]
+        }
+      ]
     }
   ],
   "relations": [
@@ -1109,7 +1262,7 @@
       "parent_columns": [
         "id"
       ],
-      "parent_cardinality": "zero_or_one",
+      "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
     },
     {
@@ -1345,6 +1498,19 @@
       ],
       "parent_cardinality": "zero_or_one",
       "def": "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.refresh_tokens",
+      "columns": [
+        "user_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
     }
   ],
   "functions": [
