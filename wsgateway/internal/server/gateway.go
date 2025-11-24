@@ -25,15 +25,19 @@ type Channel string
 const (
 	NotificationChannel Channel = "notification_channnel"
 	ChatChannnel        Channel = "chat_channel"
+	ReadChannel         Channel = "read_channel"
 	AckChannel          Channel = "ack_channel"
+	PresenceChannel     Channel = "presence_channel"
 )
 
 type Event string
 
 const (
-	ChatEvent     Event = "chat_event"
-	AckEvent      Event = "ack_event"
-	PresenceEvent Event = "presence_event"
+	ChatEvent         Event = "chat_event"
+	ReadEvent         Event = "read_event"
+	AckEvent          Event = "ack_event"
+	PresenceEvent     Event = "presence_event"
+	NotificationEvent Event = "notification_event"
 )
 
 func NewGateway(rdb *redis.Client) *Gateway {
@@ -58,8 +62,8 @@ func (g *Gateway) handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("User %s connected.", userID)
-	g.registerConnection(userID, conn)
-	defer g.deregisterConnection(userID, conn)
+	g.registerConnection(r.Context(), userID, conn)
+	defer g.deregisterConnection(r.Context(), userID, conn)
 
 	for {
 		_, message, err := conn.ReadMessage()
@@ -69,6 +73,13 @@ func (g *Gateway) handleConnections(w http.ResponseWriter, r *http.Request) {
 		g.routeIncomingMessage(r.Context(), userID, message)
 	}
 }
+
+// client -> websocket: chat
+
+// server -> redis -> websocket: notification ack chat presence
+
+// websocket -> redis -> server: chat presence
+// websocket -> client: notification ack chat presence
 
 type ClientMessage struct {
 	Type    Event           `json:"type"`
@@ -83,34 +94,67 @@ func (g *Gateway) routeIncomingMessage(ctx context.Context, userID uuid.UUID, ra
 	}
 
 	switch msg.Type {
-	case "chat":
-		g.rdb.Publish(ctx, string(ChatChannnel), rawMessage)
+	case ChatEvent:
+		var payload MessagePayload
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			log.Printf("Invalid chat message payload from %s", userID)
+			return
+		}
+		payload.SenderID = userID
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			log.Printf("Failed to marshal chat message payload from %s", userID)
+			return
+		}
+		if err := g.rdb.Publish(ctx, string(ChatChannnel), string(payloadBytes)).Err(); err != nil {
+			log.Printf("Failed to publish chat message from %s: %v", userID, err)
+			return
+		}
 		log.Printf("Routing chat message from %s", userID)
-	case "presence":
-		g.rdb.Set(ctx, fmt.Sprintf("user:status:%s", userID), "online", 0)
+	case ReadEvent:
+		var payload ReadPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			log.Printf("Invalid read message payload from %s", userID)
+			return
+		}
+		payload.UserID = userID
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			log.Printf("Failed to marshal read message payload from %s", userID)
+			return
+		}
+		if err := g.rdb.Publish(ctx, string(ReadChannel), string(payloadBytes)).Err(); err != nil {
+			log.Printf("Failed to publish read message from %s: %v", userID, err)
+			return
+		}
+		log.Printf("Routing read message from %s", userID)
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
 }
 
-func (g *Gateway) registerConnection(userID uuid.UUID, conn *websocket.Conn) {
+func (g *Gateway) registerConnection(ctx context.Context, userID uuid.UUID, conn *websocket.Conn) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	g.connections[userID] = conn
+	g.rdb.Set(ctx, fmt.Sprintf("user:status:%s", userID), "online", 0)
+	g.rdb.Publish(ctx, string(PresenceEvent), fmt.Sprintf(`{"user_id":"%s","status":"online"}`, userID))
 }
 
-func (g *Gateway) deregisterConnection(userID uuid.UUID, conn *websocket.Conn) {
+func (g *Gateway) deregisterConnection(ctx context.Context, userID uuid.UUID, conn *websocket.Conn) {
 	conn.Close()
 
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	if existingConn, ok := g.connections[userID]; ok && existingConn == conn {
 		delete(g.connections, userID)
+		g.rdb.Del(ctx, fmt.Sprintf("user:status:%s", userID))
+		g.rdb.Publish(ctx, string(PresenceEvent), fmt.Sprintf(`{"user_id":"%s","status":"offline"}`, userID))
 		log.Printf("User %s disconnected and deregistered.", userID)
 	}
 }
 
-func (g *Gateway) SubscribeChanel(ctx context.Context, channel Channel, handler func(ctx context.Context, message *redis.Message) error) error {
+func (g *Gateway) SubscribeChanel(ctx context.Context, channel Channel, handler func(ctx context.Context, message *redis.Message) error) {
 	pubsub := g.rdb.Subscribe(ctx, string(channel))
 	defer pubsub.Close()
 
@@ -121,5 +165,4 @@ func (g *Gateway) SubscribeChanel(ctx context.Context, channel Channel, handler 
 			log.Printf("Error handling message from channel %s: %v", channel, err)
 		}
 	}
-	return nil
 }

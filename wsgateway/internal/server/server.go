@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-redis/redis/v8"
@@ -43,29 +42,11 @@ func NewServer(rdb *redis.Client, conf *ServerConfig) *Server {
 }
 
 func (s *Server) Start() error {
-	errCh := make(chan error, 1)
-	go func() {
-		if err := s.gateway.SubscribeChanel(context.Background(), NotificationChannel, s.gateway.NotificationHandler); err != nil {
-			errCh <- err
-		}
-	}()
-	go func() {
-		if err := s.gateway.SubscribeChanel(context.Background(), ChatChannnel, s.gateway.ChatMessageHandler); err != nil {
-			errCh <- err
-		}
-	}()
-	go func() {
-		if err := s.gateway.SubscribeChanel(context.Background(), AckChannel, s.gateway.AckHandler); err != nil {
-			errCh <- err
-		}
-	}()
-
-	select {
-	case err := <-errCh:
-		log.Fatalf("致命的なサーバーエラーを検知しました: %v", err)
-	case <-time.After(5 * time.Second):
-		fmt.Println("サーバーは起動し、5秒経過しました。")
-	}
+	go s.gateway.SubscribeChanel(context.Background(), NotificationChannel, s.gateway.NotificationHandler)
+	go s.gateway.SubscribeChanel(context.Background(), ChatChannnel, s.gateway.ChatMessageHandler)
+	go s.gateway.SubscribeChanel(context.Background(), AckChannel, s.gateway.AckHandler)
+	go s.gateway.SubscribeChanel(context.Background(), PresenceChannel, s.gateway.PresenceHandler)
+	go s.gateway.SubscribeChanel(context.Background(), ReadChannel, s.gateway.ReadHandler)
 
 	s.httpServer = &http.Server{
 		Addr:         s.conf.ServerAddr,
