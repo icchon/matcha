@@ -9,14 +9,22 @@ import (
 
 type UserProfileQuery struct {
 	UserID           *uuid.UUID
+	ExcludeUserID    *uuid.UUID
 	FirstName        *string
 	LastName         *string
 	Username         *string
 	Gender           *entity.Gender
 	SexualPreference *entity.SexualPreference
+	AgeMin           *int
+	AgeMax           *int
 	Biography        *string
 	FameRating       *int32
+	FameMin          *int32
+	FameMax          *int32
 	LocationName     *string
+	Latitude         *float64
+	Longitude        *float64
+	Distance         *float64
 }
 
 type CreateUserProfileParams struct {

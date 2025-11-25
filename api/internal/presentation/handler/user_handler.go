@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -177,4 +179,130 @@ func (h *UserHandler) UnblockUserHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User unblocked successfully"})
+}
+
+// GetMyUserDataHandler handles GET /users/me/data
+func (h *UserHandler) GetMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+
+	userData, err := h.userService.GetUserData(r.Context(), userID)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, userData)
+}
+
+// CreateMyUserDataHandler handles POST /users/me/data
+func (h *UserHandler) CreateMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+
+	var userData entity.UserData
+	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+	userData.UserID = userID
+
+	if err := h.userService.CreateUserData(r.Context(), &userData); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusCreated, userData)
+}
+
+// UpdateMyUserDataHandler handles PUT /users/me/data
+func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+
+	var userData entity.UserData
+	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+	userData.UserID = userID
+
+	helper.RespondWithJSON(w, http.StatusOK, userData)
+}
+
+// GetAllTagsHandler handles GET /tags
+func (h *UserHandler) GetAllTagsHandler(w http.ResponseWriter, r *http.Request) {
+	tags, err := h.userService.GetAllTags(r.Context())
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+	helper.RespondWithJSON(w, http.StatusOK, tags)
+}
+
+// GetUserTagsHandler handles GET /users/me/tags
+func (h *UserHandler) GetUserTagsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+	tags, err := h.userService.GetUserTags(r.Context(), userID)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+	helper.RespondWithJSON(w, http.StatusOK, tags)
+}
+
+type AddUserTagRequest struct {
+	TagID int32 `json:"tag_id"`
+}
+
+// AddUserTagHandler handles POST /users/me/tags
+func (h *UserHandler) AddUserTagHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+	var req AddUserTagRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+	if err := h.userService.AddUserTag(r.Context(), userID, req.TagID); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+	helper.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": "Tag added successfully"})
+}
+
+// DeleteUserTagHandler handles DELETE /users/me/tags/{tagID}
+func (h *UserHandler) DeleteUserTagHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+	tagIDStr := chi.URLParam(r, "tagID")
+	tagID, err := strconv.Atoi(tagIDStr)
+	if err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+	if err := h.userService.DeleteUserTag(r.Context(), userID, int32(tagID)); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+	helper.RespondWithJSON(w, http.StatusNoContent, nil)
 }

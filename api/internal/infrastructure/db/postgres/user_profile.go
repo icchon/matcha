@@ -21,8 +21,8 @@ func NewUserProfileRepository(db DBTX) repo.UserProfileRepository {
 
 func (r *userProfileRepository) Create(ctx context.Context, userProfile *entity.UserProfile) error {
 	query := `
-		INSERT INTO user_profiles (user_id, first_name, last_name, username, gender, sexual_preference, biography, location_name)
-		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :biography, :location_name)
+		INSERT INTO user_profiles (user_id, first_name, last_name, username, gender, sexual_preference, birthday, occupation, biography, location_name)
+		VALUES (:user_id, :first_name, :last_name, :username, :gender, :sexual_preference, :birthday, :occupation, :biography, :location_name)
 		RETURNING *
 	`
 	stmt, err := r.db.PrepareNamedContext(ctx, query)
@@ -41,6 +41,8 @@ func (r *userProfileRepository) Update(ctx context.Context, userProfile *entity.
 			username = :username,
 			gender = :gender,
 			sexual_preference = :sexual_preference,
+			birthday = :birthday,
+			occupation = :occupation,
 			biography = :biography,
 			fame_rating = :fame_rating,
 			location_name = :location_name
@@ -74,6 +76,11 @@ func (r *userProfileRepository) Query(ctx context.Context, q *repo.UserProfileQu
 		args = append(args, *q.UserID)
 		argCount++
 	}
+	if q.ExcludeUserID != nil {
+		query += fmt.Sprintf(" AND user_id != $%d", argCount)
+		args = append(args, *q.ExcludeUserID)
+		argCount++
+	}
 	if q.FirstName != nil {
 		query += fmt.Sprintf(" AND first_name = $%d", argCount)
 		args = append(args, *q.FirstName)
@@ -99,6 +106,16 @@ func (r *userProfileRepository) Query(ctx context.Context, q *repo.UserProfileQu
 		args = append(args, *q.SexualPreference)
 		argCount++
 	}
+	if q.AgeMin != nil {
+		query += fmt.Sprintf(" AND date_part('year', age(birthday)) >= $%d", argCount)
+		args = append(args, *q.AgeMin)
+		argCount++
+	}
+	if q.AgeMax != nil {
+		query += fmt.Sprintf(" AND date_part('year', age(birthday)) <= $%d", argCount)
+		args = append(args, *q.AgeMax)
+		argCount++
+	}
 	if q.Biography != nil {
 		query += fmt.Sprintf(" AND biography LIKE $%d", argCount)
 		args = append(args, "%"+*q.Biography+"%")
@@ -107,6 +124,16 @@ func (r *userProfileRepository) Query(ctx context.Context, q *repo.UserProfileQu
 	if q.FameRating != nil {
 		query += fmt.Sprintf(" AND fame_rating = $%d", argCount)
 		args = append(args, *q.FameRating)
+		argCount++
+	}
+	if q.FameMin != nil {
+		query += fmt.Sprintf(" AND fame_rating >= $%d", argCount)
+		args = append(args, *q.FameMin)
+		argCount++
+	}
+	if q.FameMax != nil {
+		query += fmt.Sprintf(" AND fame_rating <= $%d", argCount)
+		args = append(args, *q.FameMax)
 		argCount++
 	}
 	if q.LocationName != nil {

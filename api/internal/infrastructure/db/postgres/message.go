@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 )
@@ -81,16 +82,21 @@ func (r *messageRepository) Query(ctx context.Context, q *repo.MessageQuery) ([]
 		args = append(args, *q.ID)
 		argCount++
 	}
-	if q.SenderID != nil {
+
+	if q.SenderID != nil && q.RecipientID != nil {
+		query += fmt.Sprintf(" AND ((sender_id = $%d AND recipient_id = $%d) OR (sender_id = $%d AND recipient_id = $%d))", argCount, argCount+1, argCount+1, argCount)
+		args = append(args, *q.SenderID, *q.RecipientID)
+		argCount += 2
+	} else if q.SenderID != nil {
 		query += fmt.Sprintf(" AND sender_id = $%d", argCount)
 		args = append(args, *q.SenderID)
 		argCount++
-	}
-	if q.RecipientID != nil {
+	} else if q.RecipientID != nil {
 		query += fmt.Sprintf(" AND recipient_id = $%d", argCount)
 		args = append(args, *q.RecipientID)
 		argCount++
 	}
+
 	if q.Content != nil {
 		query += fmt.Sprintf(" AND content LIKE $%d", argCount)
 		args = append(args, "%"+*q.Content+"%")
@@ -107,6 +113,19 @@ func (r *messageRepository) Query(ctx context.Context, q *repo.MessageQuery) ([]
 		argCount++
 	}
 
+	query += " ORDER BY sent_at DESC"
+
+	if q.Limit != nil {
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, *q.Limit)
+		argCount++
+	}
+	if q.Offset != nil {
+		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, *q.Offset)
+		argCount++
+	}
+
 	var messages []*entity.Message
 	if err := r.db.SelectContext(ctx, &messages, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -115,4 +134,23 @@ func (r *messageRepository) Query(ctx context.Context, q *repo.MessageQuery) ([]
 		return nil, err
 	}
 	return messages, nil
+}
+
+func (r *messageRepository) GetLatest(ctx context.Context, userID1, userID2 uuid.UUID) (*entity.Message, error) {
+	var message entity.Message
+	query := `
+		SELECT *
+		FROM messages
+		WHERE (sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1)
+		ORDER BY sent_at DESC
+		LIMIT 1
+	`
+	err := r.db.GetContext(ctx, &message, query, userID1, userID2)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No message found, which is a valid scenario
+		}
+		return nil, err
+	}
+	return &message, nil
 }

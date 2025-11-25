@@ -7,8 +7,8 @@
 | Name | Type | Default | Nullable | Children | Parents | Comment |
 | ---- | ---- | ------- | -------- | -------- | ------- | ------- |
 | user_id | uuid |  | false |  | [public.users](public.users.md) |  |
-| latitude | numeric(10,8) |  | true |  |  |  |
-| longitude | numeric(11,8) |  | true |  |  |  |
+| latitude | numeric(10,8) |  | false |  |  |  |
+| longitude | numeric(11,8) |  | false |  |  |  |
 | internal_score | integer | 0 | true |  |  |  |
 
 ## Constraints

@@ -15,17 +15,23 @@ type userService struct {
 	viewRepo       repo.ViewQueryRepository
 	connectionRepo repo.ConnectionQueryRepository
 	notifSvc       service.NotificationService
+	userDataRepo   repo.UserDataRepository
+	userTagRepo    repo.UserTagRepository
+	tagRepo        repo.TagRepository
 }
 
 var _ service.UserService = (*userService)(nil)
 
-func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository, notifSvc service.NotificationService) service.UserService {
+func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository, notifSvc service.NotificationService, userDataRepo repo.UserDataRepository, userTagRepo repo.UserTagRepository, tagRepo repo.TagRepository) service.UserService {
 	return &userService{
 		uow:            uow,
 		likeRepo:       likeRepo,
 		viewRepo:       viewRepo,
 		connectionRepo: connectionRepo,
 		notifSvc:       notifSvc,
+		userDataRepo:   userDataRepo,
+		userTagRepo:    userTagRepo,
+		tagRepo:        tagRepo,
 	}
 }
 
@@ -172,16 +178,45 @@ func (s *userService) FindMyViewedList(ctx context.Context, userID uuid.UUID) ([
 }
 
 func (s *userService) FindConnections(ctx context.Context, userID uuid.UUID) ([]*entity.Connection, error) {
-	connection1, err := s.connectionRepo.Query(ctx, &repo.ConnectionQuery{User1ID: &userID})
-	if err != nil {
-		return nil, err
+	return s.connectionRepo.Query(ctx, &repo.ConnectionQuery{User1ID: &userID})
+}
+
+func (s *userService) GetUserData(ctx context.Context, userID uuid.UUID) (*entity.UserData, error) {
+	return s.userDataRepo.Find(ctx, userID)
+}
+
+func (s *userService) CreateUserData(ctx context.Context, userData *entity.UserData) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		return rm.UserDataRepo().Create(ctx, userData)
+	})
+}
+
+func (s *userService) UpdateUserData(ctx context.Context, userData *entity.UserData) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		return rm.UserDataRepo().Update(ctx, userData)
+	})
+}
+
+func (s *userService) GetAllTags(ctx context.Context) ([]*entity.Tag, error) {
+	return s.tagRepo.GetAll(ctx)
+}
+
+func (s *userService) GetUserTags(ctx context.Context, userID uuid.UUID) ([]*entity.Tag, error) {
+	return s.userTagRepo.Query(ctx, &repo.UserTagQuery{UserID: &userID})
+}
+
+func (s *userService) AddUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error {
+	userTag := &entity.UserTag{
+		UserID: userID,
+		TagID:  tagID,
 	}
-	connection2, err := s.connectionRepo.Query(ctx, &repo.ConnectionQuery{User2ID: &userID})
-	if err != nil {
-		return nil, err
-	}
-	connections := make([]*entity.Connection, 0, len(connection1)+len(connection2))
-	connections = append(connections, connection1...)
-	connections = append(connections, connection2...)
-	return connections, nil
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		return rm.UserTagRepo().Create(ctx, userTag)
+	})
+}
+
+func (s *userService) DeleteUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		return rm.UserTagRepo().Delete(ctx, userID, tagID)
+	})
 }

@@ -77,6 +77,18 @@ services:
       - "8080:8080"
     profiles:
       - tools
+  
+  seeder:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: ["./db-seeder"]
+    depends_on:
+      - db
+      - filesrv
+    env_file: ./api/.env
+    profiles:
+      - tools
 
   redis-commander:
     image: rediscommander/redis-commander:latest

@@ -58,12 +58,12 @@
         {
           "name": "latitude",
           "type": "numeric(10,8)",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "longitude",
           "type": "numeric(11,8)",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "internal_score",
@@ -397,12 +397,12 @@
         {
           "name": "first_name",
           "type": "varchar(50)",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "last_name",
           "type": "varchar(50)",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "username",
@@ -412,11 +412,21 @@
         {
           "name": "gender",
           "type": "gender_enum",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "sexual_preference",
           "type": "preference_enum",
+          "nullable": false
+        },
+        {
+          "name": "birthday",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "occupation",
+          "type": "varchar(255)",
           "nullable": true
         },
         {
@@ -427,8 +437,7 @@
         {
           "name": "fame_rating",
           "type": "integer",
-          "nullable": true,
-          "default": "0"
+          "nullable": true
         },
         {
           "name": "location_name",
@@ -447,16 +456,6 @@
         }
       ],
       "constraints": [
-        {
-          "name": "user_profiles_fame_rating_check",
-          "type": "CHECK",
-          "def": "CHECK ((fame_rating \u003e= 0))",
-          "table": "public.user_profiles",
-          "referenced_table": "",
-          "columns": [
-            "fame_rating"
-          ]
-        },
         {
           "name": "user_profiles_user_id_fkey",
           "type": "FOREIGN KEY",
@@ -1615,7 +1614,7 @@
   ],
   "driver": {
     "name": "postgres",
-    "database_version": "PostgreSQL 13.22 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit",
+    "database_version": "PostgreSQL 13.23 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit",
     "meta": {
       "current_schema": "public",
       "search_paths": [

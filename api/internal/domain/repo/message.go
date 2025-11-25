@@ -14,11 +14,14 @@ type MessageQuery struct {
 	Content     *string
 	SentAt      *time.Time
 	IsRead      *bool
+	Limit       *int
+	Offset      *int
 }
 
 type MessageQueryRepository interface {
 	Find(ctx context.Context, messageID int64) (*entity.Message, error)
 	Query(ctx context.Context, q *MessageQuery) ([]*entity.Message, error)
+	GetLatest(ctx context.Context, userID1, userID2 uuid.UUID) (*entity.Message, error)
 }
 
 type MessageCommandRepository interface {

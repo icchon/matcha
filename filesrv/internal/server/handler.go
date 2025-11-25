@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -24,6 +25,28 @@ func NewHandler(uploadDir string, baseUrl string) *Handler {
 		UploadDir: uploadDir,
 		BaseUrl:   baseUrl,
 	}
+}
+
+type DogApiResponse struct {
+	Message string `json:"message"`
+	Status  string `json:"status"`
+}
+
+func (h *Handler) RandomDogHandler(w http.ResponseWriter, r *http.Request) {
+	const dogApiUrl = "https://dog.ceo/api/breeds/image/random"
+
+	var resp DogApiResponse
+	res, err := http.Get(dogApiUrl)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching dog image: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer res.Body.Close()
+	json.NewDecoder(res.Body).Decode(&resp)
+
+	w.Header().Set("Content-Type", "plain/text")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(resp.Message))
 }
 
 func (h *Handler) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
