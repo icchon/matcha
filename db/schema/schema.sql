@@ -15,8 +15,8 @@ CREATE TABLE users (
 
 CREATE TABLE user_data (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    latitude DECIMAL(10, 8) NULL, 
-    longitude DECIMAL(11, 8) NULL,
+    latitude DECIMAL(10, 8) NOT NULL, 
+    longitude DECIMAL(11, 8) NOT NULL,
     internal_score INT DEFAULT 0
 );
 
@@ -65,16 +65,16 @@ CREATE TYPE preference_enum AS ENUM ('heterosexual', 'homosexual', 'bisexual');
 CREATE TABLE user_profiles (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     
-    first_name VARCHAR(50) NULL, 
-    last_name VARCHAR(50) NULL, 
+    first_name VARCHAR(50) NOT NULL, 
+    last_name VARCHAR(50) NOT NULL, 
     username VARCHAR(50) NULL, 
 
-    gender gender_enum NULL,
-    sexual_preference preference_enum NULL,
-    biography TEXT NULL,
-    
-    fame_rating INT DEFAULT 0 CHECK (fame_rating >= 0), 
-    location_name VARCHAR(255)
+    gender gender_enum NOT NULL,
+    sexual_preference preference_enum NOT NULL,
+    birthday DATE NOT NULL,
+    occupation VARCHAR(255),
+    biography TEXT,
+    fame_rating INT,    location_name VARCHAR(255)
 );
 
 -- (5. 関係性テーブル, 6. チャットテーブルも同様に users テーブルを参照)
@@ -117,6 +117,7 @@ CREATE TABLE likes (
 CREATE TABLE connections (
     user1_id UUID REFERENCES users(id) ON DELETE CASCADE,
     user2_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user1_id, user2_id),
     CHECK (user1_id < user2_id)
 );

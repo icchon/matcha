@@ -24,6 +24,7 @@ import (
 	"github.com/icchon/matcha/api/internal/presentation/handler"
 	appmiddleware "github.com/icchon/matcha/api/internal/presentation/middleware"
 	"github.com/icchon/matcha/api/internal/service/auth"
+	"github.com/icchon/matcha/api/internal/service/chat"
 	"github.com/icchon/matcha/api/internal/service/mail"
 	"github.com/icchon/matcha/api/internal/service/notice"
 	"github.com/icchon/matcha/api/internal/service/profile"
@@ -100,17 +101,23 @@ func NewServer(
 	pictureRepository := postgres.NewPictureRepository(db)
 	messageRepository := postgres.NewMessageRepository(db)
 	notificationRepository := postgres.NewNotificationRepository(db)
+	userDataRepository := postgres.NewUserDataRepository(db)
+	userTagRepository := postgres.NewUserTagRepository(db)
+	tagRepository := postgres.NewTagRepository(db)
 
 	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, notificationPub)
-	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService)
+	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService, userDataRepository, userTagRepository, tagRepository)
 	mailService := mail.NewApplicationMailService(mockMailClient, config.BaseUrl)
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
-	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, notificationService)
+	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, notificationService, userTagRepository, userDataRepository)
+	chatService := chat.NewChatService(connectionRepo, messageRepository, profileService)
 
 	userHandler := handler.NewUserHandler(userService, profileService)
 	sampleHander := handler.NewSampleHandler()
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
+	chatHandler := handler.NewChatHandler(chatService)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
 
 	presenceSub := subscriber.NewPresenceSubscriber(rdb)
 	chatSub := subscriber.NewchatSubscriber(rdb)
@@ -140,12 +147,12 @@ func NewServer(
 		config: config,
 	}
 
-	server.setupRoutes(userHandler, sampleHander, authHandler, profileHandler)
+	server.setupRoutes(userHandler, sampleHander, authHandler, profileHandler, chatHandler, notificationHandler)
 
 	return server
 }
 
-func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler, ah *handler.AuthHandler, ph *handler.ProfileHandler) {
+func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler, ah *handler.AuthHandler, ph *handler.ProfileHandler, ch *handler.ChatHandler, nh *handler.NotificationHandler) {
 	s.router.Use(middleware.RequestID)
 	s.router.Use(middleware.Logger)
 	s.router.Use(middleware.Recoverer)
@@ -176,28 +183,54 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 					r.Post("/like", uh.LikeUserHandler)
 					r.Delete("/like", uh.UnlikeUserHandler)
 					r.Post("/block", uh.BlockUserHandler)
-				})
-				r.Route("/me", func(r chi.Router) {
-					r.Delete("/", uh.DeleteMyAccountHandler)
-					r.Get("/likes", uh.GetMyLikedListHandler)
-					r.Get("/views", uh.GetMyViewedListHandler)
-					r.Get("/blocks", uh.GetMyBlockedListHandler)
-					r.Delete("/blocks/{userID}", uh.UnblockUserHandler)
+					r.Get("/profile", ph.GetUserProfileHandler)
 				})
 			})
 		})
 
-		r.Route("/profile", func(r chi.Router) {
+		r.Route("/me", func(r chi.Router) {
 			r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
+			r.Delete("/", uh.DeleteMyAccountHandler)
+			r.Get("/likes", uh.GetMyLikedListHandler)
+			r.Get("/views", uh.GetMyViewedListHandler)
+			r.Get("/blocks", uh.GetMyBlockedListHandler)
+			r.Get("/chats", ch.GetUserChats)
+			r.Get("/notifications", nh.GetUserNotifications)
 
-			r.Post("/", ph.CreateProfileHandler)
-			r.Put("/", ph.UpdateProfileHandler)
-			r.Post("/pictures", ph.UploadProfilePictureHandler)
-			r.Delete("/pictures/{pictureID}", ph.DeleteProfilePictureHandler)
-			r.Get("/likes", ph.GetWhoLikeMeListHandler)
-			r.Get("/views", ph.GetWhoViewedMeListHandler)
+			r.Route("/data", func(r chi.Router) {
+				r.Get("/", uh.GetMyUserDataHandler)
+				r.Post("/", uh.CreateMyUserDataHandler)
+				r.Put("/", uh.UpdateMyUserDataHandler)
+			})
+
+			r.Route("/tags", func(r chi.Router) {
+				r.Get("/", uh.GetUserTagsHandler)
+				r.Post("/", uh.AddUserTagHandler)
+				r.Delete("/{tagID}", uh.DeleteUserTagHandler)
+			})
+
+			r.Route("/profile", func(r chi.Router) {
+				r.Post("/", ph.CreateProfileHandler)
+				r.Put("/", ph.UpdateProfileHandler)
+				r.Post("/pictures", ph.UploadProfilePictureHandler)
+				r.Delete("/pictures/{pictureID}", ph.DeleteProfilePictureHandler)
+				r.Get("/likes", ph.GetWhoLikeMeListHandler)
+				r.Get("/views", ph.GetWhoViewedMeListHandler)
+			})
 		})
 
+		r.Route("/tags", func(r chi.Router) {
+			r.Get("/", uh.GetAllTagsHandler)
+		})
+		r.Route("/profiles", func(r chi.Router) {
+			r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
+			r.Get("/", ph.ListProfilesHandler)
+			r.Get("/recommends", ph.RecommendProfilesHandler)
+		})
+		r.Route("/chats/{userID}/messages", func(r chi.Router) {
+			r.Use(appmiddleware.AuthMiddleware(s.config.JWTSigningKey))
+			r.Get("/", ch.GetChatMessagesHandler)
+		})
 	})
 	log.Println("Routes registered.")
 }

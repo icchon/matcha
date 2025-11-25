@@ -16,4 +16,11 @@ type UserService interface {
 	BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
 	UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
 	FindBlockList(ctx context.Context, userID uuid.UUID) ([]*entity.Block, error)
+	GetUserData(ctx context.Context, userID uuid.UUID) (*entity.UserData, error)
+	CreateUserData(ctx context.Context, userData *entity.UserData) error
+	UpdateUserData(ctx context.Context, userData *entity.UserData) error
+	GetAllTags(ctx context.Context) ([]*entity.Tag, error)
+	GetUserTags(ctx context.Context, userID uuid.UUID) ([]*entity.Tag, error)
+	AddUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error
+	DeleteUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error
 }

@@ -23,4 +23,5 @@ type RepositoryManager interface {
 	ViewRepo() ViewRepository
 	LikeRepo() LikeRepository
 	BlockRepo() BlockRepository
+	UserDataRepo() UserDataRepository
 }

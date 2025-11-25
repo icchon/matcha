@@ -19,6 +19,7 @@ type repositoryManager struct {
 	viewRepo              repo.ViewRepository
 	likeRepo              repo.LikeRepository
 	blockRepo             repo.BlockRepository
+	userDataRepo          repo.UserDataRepository
 }
 
 func NewRepositoryManager(
@@ -36,6 +37,7 @@ func NewRepositoryManager(
 	viewRepo repo.ViewRepository,
 	likeRepo repo.LikeRepository,
 	blockRepo repo.BlockRepository,
+	userDataRepo repo.UserDataRepository,
 ) repo.RepositoryManager {
 	return &repositoryManager{
 		userRepo:              userRepo,
@@ -52,7 +54,12 @@ func NewRepositoryManager(
 		viewRepo:              viewRepo,
 		likeRepo:              likeRepo,
 		blockRepo:             blockRepo,
+		userDataRepo:          userDataRepo,
 	}
+}
+
+func (r *repositoryManager) UserDataRepo() repo.UserDataRepository {
+	return r.userDataRepo
 }
 
 func (r *repositoryManager) BlockRepo() repo.BlockRepository {

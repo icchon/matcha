@@ -45,7 +45,7 @@ func NewServer(config *ServerConfig) *Server {
 
 	h := NewHandler(config.UploadDir, config.BaseUrl)
 	r.Post("/upload", h.UploadImageHandler)
-
+	r.Get("/dog", h.RandomDogHandler)
 	fileServer(r, "/images", http.Dir(config.UploadDir))
 	return server
 }

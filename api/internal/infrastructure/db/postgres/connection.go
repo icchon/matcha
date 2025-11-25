@@ -66,16 +66,21 @@ func (r *connectionRepository) Query(ctx context.Context, q *repo.ConnectionQuer
 	args := []interface{}{}
 	argCount := 1
 
-	if q.User1ID != nil {
-		query += fmt.Sprintf(" AND user1_id = $%d", argCount)
+	// Handle User1ID and User2ID as an OR condition if either is provided
+	if q.User1ID != nil && q.User2ID != nil {
+		query += fmt.Sprintf(" AND ((user1_id = $%d AND user2_id = $%d) OR (user1_id = $%d AND user2_id = $%d))", argCount, argCount+1, argCount+1, argCount)
+		args = append(args, *q.User1ID, *q.User2ID, *q.User1ID, *q.User2ID)
+		argCount += 4 // Need 4 arguments for the OR condition
+	} else if q.User1ID != nil {
+		query += fmt.Sprintf(" AND (user1_id = $%d OR user2_id = $%d)", argCount, argCount)
 		args = append(args, *q.User1ID)
 		argCount++
-	}
-	if q.User2ID != nil {
-		query += fmt.Sprintf(" AND user2_id = $%d", argCount)
+	} else if q.User2ID != nil {
+		query += fmt.Sprintf(" AND (user1_id = $%d OR user2_id = $%d)", argCount, argCount)
 		args = append(args, *q.User2ID)
 		argCount++
 	}
+
 	if q.CreatedAt != nil {
 		query += fmt.Sprintf(" AND created_at = $%d", argCount)
 		args = append(args, *q.CreatedAt)

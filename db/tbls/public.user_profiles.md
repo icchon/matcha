@@ -7,20 +7,21 @@
 | Name | Type | Default | Nullable | Children | Parents | Comment |
 | ---- | ---- | ------- | -------- | -------- | ------- | ------- |
 | user_id | uuid |  | false |  | [public.users](public.users.md) |  |
-| first_name | varchar(50) |  | true |  |  |  |
-| last_name | varchar(50) |  | true |  |  |  |
+| first_name | varchar(50) |  | false |  |  |  |
+| last_name | varchar(50) |  | false |  |  |  |
 | username | varchar(50) |  | true |  |  |  |
-| gender | gender_enum |  | true |  |  |  |
-| sexual_preference | preference_enum |  | true |  |  |  |
+| gender | gender_enum |  | false |  |  |  |
+| sexual_preference | preference_enum |  | false |  |  |  |
+| birthday | date |  | false |  |  |  |
+| occupation | varchar(255) |  | true |  |  |  |
 | biography | text |  | true |  |  |  |
-| fame_rating | integer | 0 | true |  |  |  |
+| fame_rating | integer |  | true |  |  |  |
 | location_name | varchar(255) |  | true |  |  |  |
 
 ## Constraints
 
 | Name | Type | Definition |
 | ---- | ---- | ---------- |
-| user_profiles_fame_rating_check | CHECK | CHECK ((fame_rating >= 0)) |
 | user_profiles_user_id_fkey | FOREIGN KEY | FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE |
 | user_profiles_pkey | PRIMARY KEY | PRIMARY KEY (user_id) |
 

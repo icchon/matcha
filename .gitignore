@@ -341,3 +341,4 @@ filesrv/uploads/*.heic
 file-server
 api-server
 ws-server
+db-seeder

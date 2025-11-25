@@ -9,7 +9,7 @@
 | [public.auths](public.auths.md) | 7 |  | BASE TABLE |
 | [public.verification_tokens](public.verification_tokens.md) | 3 |  | BASE TABLE |
 | [public.password_resets](public.password_resets.md) | 3 |  | BASE TABLE |
-| [public.user_profiles](public.user_profiles.md) | 9 |  | BASE TABLE |
+| [public.user_profiles](public.user_profiles.md) | 11 |  | BASE TABLE |
 | [public.tags](public.tags.md) | 2 |  | BASE TABLE |
 | [public.user_tags](public.user_tags.md) | 2 |  | BASE TABLE |
 | [public.pictures](public.pictures.md) | 5 |  | BASE TABLE |
