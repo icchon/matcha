@@ -276,7 +276,6 @@ func createLikes(db *sqlx.DB, users []entity.User) {
 		// Check if this like already exists to avoid duplicates
 		// Removed: ON CONFLICT DO NOTHING handles this
 
-
 		if _, err := tx.NamedExec(`INSERT INTO likes (liker_id, liked_id, created_at) VALUES (:liker_id, :liked_id, :created_at) ON CONFLICT (liker_id, liked_id) DO NOTHING`, like); err != nil {
 			log.Fatalf("Error inserting like for liker %s and liked %s: %v", liker.ID, liked.ID, err)
 		}
@@ -502,13 +501,13 @@ func main() {
 
 	log.Println("Seeding database...")
 
-	users := createUsers(db)            // Call createUsers
-	tags := createTags(db)              // Call createTags
-	createAuths(db, users)              // Call createAuths
-	createUserData(db, users)           // Call createUserData
-	createUserProfiles(db, users)       // Call createUserProfiles
-	createUserTags(db, users, tags)     // Call createUserTags
-	
+	users := createUsers(db)        // Call createUsers
+	tags := createTags(db)          // Call createTags
+	createAuths(db, users)          // Call createAuths
+	createUserData(db, users)       // Call createUserData
+	createUserProfiles(db, users)   // Call createUserProfiles
+	createUserTags(db, users, tags) // Call createUserTags
+
 	createBlocks(db, users)             // Call createBlocks
 	createConnections(db, users)        // Call createConnections
 	createLikes(db, users)              // Call createLikes
