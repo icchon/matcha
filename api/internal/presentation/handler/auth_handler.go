@@ -33,6 +33,29 @@ type LoginHandlerResponse struct {
 	RefreshToken string    `json:"refresh_token"`
 }
 
+
+//auth/refresh POST
+type RefreshAccessTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+type RefreshAccessTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+}
+
+func (h *AuthHandler) RefreshAccessTokenHandler(w http.ResponseWriter, r *http.Request){
+	var req RefreshAccessTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+	access, err := h.authService.IssueAccessToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+	helper.RespondWithJSON(w, http.StatusOK, RefreshAccessTokenResponse{AccessToken: access})
+}
+
 // /auth/login POST
 func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req LoginHandlerRequest

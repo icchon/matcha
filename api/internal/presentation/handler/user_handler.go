@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -22,6 +23,91 @@ type UserHandler struct {
 func NewUserHandler(userService service.UserService, profileService service.ProfileService) *UserHandler {
 	return &UserHandler{userService: userService, profileService: profileService}
 }
+
+// UserDataResponse is the DTO for UserData responses.
+type UserDataResponse struct {
+	UserID        uuid.UUID `json:"user_id"`
+	Latitude      *float64  `json:"latitude,omitempty"`
+	Longitude     *float64  `json:"longitude,omitempty"`
+	InternalScore *int32    `json:"internal_score,omitempty"`
+}
+
+// newUserDataResponse converts an entity.UserData to a UserDataResponse DTO.
+func newUserDataResponse(ud *entity.UserData) *UserDataResponse {
+	if ud == nil {
+		return nil
+	}
+	res := &UserDataResponse{
+		UserID: ud.UserID,
+	}
+	if ud.Latitude.Valid {
+		res.Latitude = &ud.Latitude.Float64
+	}
+	if ud.Longitude.Valid {
+		res.Longitude = &ud.Longitude.Float64
+	}
+	if ud.InternalScore.Valid {
+		res.InternalScore = &ud.InternalScore.Int32
+	}
+	return res
+}
+
+// UserDataRequest is the DTO for creating/updating UserData.
+type UserDataRequest struct {
+	Latitude      *float64 `json:"latitude"`
+	Longitude     *float64 `json:"longitude"`
+	InternalScore *int32   `json:"internal_score"`
+}
+
+type LikeResponse struct {
+	LikerID   uuid.UUID `json:"liker_id"`
+	LikedID   uuid.UUID `json:"liked_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func newLikeResponse(l *entity.Like) *LikeResponse {
+	if l == nil {
+		return nil
+	}
+	return &LikeResponse{
+		LikerID:   l.LikerID,
+		LikedID:   l.LikedID,
+		CreatedAt: l.CreatedAt,
+	}
+}
+
+type ViewResponse struct {
+	ViewerID uuid.UUID `json:"viewer_id"`
+	ViewedID uuid.UUID `json:"viewed_id"`
+	ViewTime time.Time `json:"view_time"`
+}
+
+func newViewResponse(v *entity.View) *ViewResponse {
+	if v == nil {
+		return nil
+	}
+	return &ViewResponse{
+		ViewerID: v.ViewerID,
+		ViewedID: v.ViewedID,
+		ViewTime: v.ViewTime,
+	}
+}
+
+type BlockResponse struct {
+	BlockerID uuid.UUID `json:"blocker_id"`
+	BlockedID uuid.UUID `json:"blocked_id"`
+}
+
+func newBlockResponse(b *entity.Block) *BlockResponse {
+	if b == nil {
+		return nil
+	}
+	return &BlockResponse{
+		BlockerID: b.BlockerID,
+		BlockedID: b.BlockedID,
+	}
+}
+
 
 type LikeUserResponse struct {
 	Connection *entity.Connection `json:"connection"`
@@ -77,10 +163,6 @@ func (h *UserHandler) UnlikeUserHandler(w http.ResponseWriter, r *http.Request) 
 	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User unliked successfully"})
 }
 
-type GetMyLikedListResponse struct {
-	Likes []*entity.Like `json:"likes"`
-}
-
 // /users/me/likes GET
 func (h *UserHandler) GetMyLikedListHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
@@ -89,14 +171,11 @@ func (h *UserHandler) GetMyLikedListHandler(w http.ResponseWriter, r *http.Reque
 		helper.HandleError(w, err)
 		return
 	}
-	res := GetMyLikedListResponse{
-		Likes: likes,
+	res := make([]*LikeResponse, len(likes))
+	for i, l := range likes {
+		res[i] = newLikeResponse(l)
 	}
 	helper.RespondWithJSON(w, http.StatusOK, res)
-}
-
-type GetMyViewedListResponse struct {
-	Views []*entity.View `json:"views"`
 }
 
 // /users/me/views GET
@@ -107,8 +186,9 @@ func (h *UserHandler) GetMyViewedListHandler(w http.ResponseWriter, r *http.Requ
 		helper.HandleError(w, err)
 		return
 	}
-	res := GetMyViewedListResponse{
-		Views: views,
+	res := make([]*ViewResponse, len(views))
+	for i, v := range views {
+		res[i] = newViewResponse(v)
 	}
 	helper.RespondWithJSON(w, http.StatusOK, res)
 }
@@ -123,9 +203,6 @@ func (h *UserHandler) DeleteMyAccountHandler(w http.ResponseWriter, r *http.Requ
 	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User account deleted successfully"})
 }
 
-type GetMyBlockedListResponse struct {
-	Blocks []*entity.Block `json:"blocks"`
-}
 
 // /users/me/blocks GET
 func (h *UserHandler) GetMyBlockedListHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,8 +212,9 @@ func (h *UserHandler) GetMyBlockedListHandler(w http.ResponseWriter, r *http.Req
 		helper.HandleError(w, err)
 		return
 	}
-	res := GetMyBlockedListResponse{
-		Blocks: blocks,
+	res := make([]*BlockResponse, len(blocks))
+	for i, b := range blocks {
+		res[i] = newBlockResponse(b)
 	}
 	helper.RespondWithJSON(w, http.StatusOK, res)
 }
@@ -181,7 +259,7 @@ func (h *UserHandler) UnblockUserHandler(w http.ResponseWriter, r *http.Request)
 	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User unblocked successfully"})
 }
 
-// GetMyUserDataHandler handles GET /users/me/data
+// GetMyUserDataHandler handles GET /me/data
 func (h *UserHandler) GetMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
 	if !ok {
@@ -195,10 +273,10 @@ func (h *UserHandler) GetMyUserDataHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	helper.RespondWithJSON(w, http.StatusOK, userData)
+	helper.RespondWithJSON(w, http.StatusOK, newUserDataResponse(userData))
 }
 
-// CreateMyUserDataHandler handles POST /users/me/data
+// CreateMyUserDataHandler handles POST /me/data
 func (h *UserHandler) CreateMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
 	if !ok {
@@ -206,22 +284,28 @@ func (h *UserHandler) CreateMyUserDataHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var userData entity.UserData
-	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+	var req UserDataRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
-	userData.UserID = userID
 
-	if err := h.userService.CreateUserData(r.Context(), &userData); err != nil {
+	userData := &entity.UserData{
+		UserID:        userID,
+		Latitude:      helper.NewNullFloat64(req.Latitude),
+		Longitude:     helper.NewNullFloat64(req.Longitude),
+		InternalScore: helper.NewNullInt32(req.InternalScore),
+	}
+
+	if err := h.userService.CreateUserData(r.Context(), userData); err != nil {
 		helper.HandleError(w, err)
 		return
 	}
 
-	helper.RespondWithJSON(w, http.StatusCreated, userData)
+	helper.RespondWithJSON(w, http.StatusCreated, newUserDataResponse(userData))
 }
 
-// UpdateMyUserDataHandler handles PUT /users/me/data
+// UpdateMyUserDataHandler handles PUT /me/data
 func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
 	if !ok {
@@ -229,14 +313,25 @@ func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var userData entity.UserData
-	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+	var req UserDataRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
-	userData.UserID = userID
 
-	helper.RespondWithJSON(w, http.StatusOK, userData)
+	userData := &entity.UserData{
+		UserID:        userID,
+		Latitude:      helper.NewNullFloat64(req.Latitude),
+		Longitude:     helper.NewNullFloat64(req.Longitude),
+		InternalScore: helper.NewNullInt32(req.InternalScore),
+	}
+
+	if err := h.userService.UpdateUserData(r.Context(), userData); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, newUserDataResponse(userData))
 }
 
 // GetAllTagsHandler handles GET /tags

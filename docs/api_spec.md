@@ -28,18 +28,14 @@ This document outlines the API endpoints for the Matcha application.
 
 -   **URL:** `/api/v1/auth/login`
 -   **Method:** `POST`
--   **Request Body:**
-    ```json
-    {
-        "email": "user@example.com",
-        "password": "password123"
-    }
-    ```
 -   **Response:**
     ```json
     {
-        "access_token": "...",
-        "refresh_token": "..."
+        "user_id": "string (UUID)",
+        "is_verified": "boolean",
+        "auth_method": "string (e.g., local, google, github)",
+        "access_token": "string",
+        "refresh_token": "string"
     }
     ```
 
@@ -50,9 +46,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** (No body, requires Authorization header)
 -   **Response:**
     ```json
-    {
-        "message": "Logged out successfully"
-    }
+    {}
     ```
 
 ### Email Verification
@@ -62,9 +56,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** URL parameter `token`.
 -   **Response:**
     ```json
-    {
-        "message": "Email verified successfully"
-    }
+    {}
     ```
     
 ### Resend Verification Email
@@ -74,13 +66,14 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
+        "user_id": "string (UUID)",
         "email": "user@example.com"
     }
     ```
 -   **Response:**
     ```json
     {
-        "message": "Verification email sent"
+        "message": "Please check your email to verify your account"
     }
     ```
 
@@ -97,7 +90,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "message": "Password reset email sent"
+        "message": "Please check your email to reset your password"
     }
     ```
 
@@ -114,9 +107,7 @@ This document outlines the API endpoints for the Matcha application.
     ```
 -   **Response:**
     ```json
-    {
-        "message": "Password reset successfully"
-    }
+    {}
     ```
 
 ### OAuth - Google Login
@@ -126,14 +117,18 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
-        "code": "oauth_code_from_google"
+        "code": "oauth_code_from_google",
+        "code_verifier": "string"
     }
     ```
 -   **Response:**
     ```json
     {
-        "access_token": "...",
-        "refresh_token": "..."
+        "user_id": "string (UUID)",
+        "is_verified": "boolean",
+        "auth_method": "string (e.g., local, google, github)",
+        "access_token": "string",
+        "refresh_token": "string"
     }
     ```
 
@@ -144,16 +139,21 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
-        "code": "oauth_code_from_github"
+        "code": "oauth_code_from_github",
+        "code_verifier": "string"
     }
     ```
 -   **Response:**
     ```json
     {
-        "access_token": "...",
-        "refresh_token": "..."
+        "user_id": "string (UUID)",
+        "is_verified": "boolean",
+        "auth_method": "string (e.g., local, google, github)",
+        "access_token": "string",
+        "refresh_token": "string"
     }
     ```
+
     
 ---
 
@@ -167,8 +167,8 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "connection": { /* connection object if a match is made */ },
-        "message": "User liked successfully" or "It's a match!"
+        "connection": "Connection Object or null (if no match is made)",
+        "message": "string (e.g., User liked successfully or It's a match!)"
     }
     ```
 
@@ -220,7 +220,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "likes": [ /* array of like objects */ ]
+        "likes": [ /* array of Like Objects */ ]
     }
     ```
     
@@ -232,7 +232,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "views": [ /* array of view objects */ ]
+        "views": [ /* array of View Objects */ ]
     }
     ```
 
@@ -244,7 +244,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "blocks": [ /* array of block objects */ ]
+        "blocks": [ /* array of Block Objects */ ]
     }
     ```
 
@@ -252,10 +252,14 @@ This document outlines the API endpoints for the Matcha application.
 
 -   **URL:** `/api/v1/me/chats`
 -   **Method:** `GET`
--   **Request:** Requires Authorization header.
 -   **Response:**
     ```json
-    [ /* array of chat objects */ ]
+    [
+        {
+            "other_user": "UserProfile Object",
+            "last_message": "Message Object or null"
+        }
+    ]
     ```
 
 ### Get My Notifications
@@ -265,7 +269,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** Requires Authorization header.
 -   **Response:**
     ```json
-    [ /* array of notification objects */ ]
+    [ /* array of Notification Objects */ ]
     ```
 
 ### My User Data
@@ -273,17 +277,22 @@ This document outlines the API endpoints for the Matcha application.
 -   **URL:** `/api/v1/me/data`
 -   **Method:** `GET`, `POST`, `PUT`
 -   **Request:** Requires Authorization header.
-    -   `POST`/`PUT` Body:
+    -   `POST`/`PUT` Body: `UserData Object` (excluding `user_id` which is taken from the authenticated user)
         ```json
         {
-            "latitude": 35.68,
-            "longitude": 139.76,
-            "internal_score": 100
+            "latitude": "number or null (float)",
+            "longitude": "number or null (float)",
+            "internal_score": "integer or null"
         }
         ```
--   **Response:**
+-   **Response:** `UserData Object`
     ```json
-    { /* user_data object */ }
+    {
+        "user_id": "string (UUID)",
+        "latitude": "number or null (float)",
+        "longitude": "number or null (float)",
+        "internal_score": "integer or null"
+    }
     ```
 
 ### My User Tags
@@ -299,7 +308,7 @@ This document outlines the API endpoints for the Matcha application.
         }
         ```
 -   **Response:**
-    -   `GET`: `[ /* array of tag objects */ ]`
+    -   `GET`: `[ /* array of Tag Objects */ ]`
     -   `POST`: `{ "message": "Tag added successfully" }`
 
 ### Delete My User Tag
@@ -307,7 +316,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **URL:** `/api/v1/me/tags/{tagID}`
 -   **Method:** `DELETE`
 -   **Request:** URL parameter `tagID`. Requires Authorization header.
--   **Response:** `204 No Content`
+-   **Response:** `{}`
 
 ### My Profile
 
@@ -316,21 +325,58 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
-        "first_name": "Test",
-        "last_name": "User",
-        "username": "testuser",
-        "gender": "male",
-        "sexual_preference": "bisexual",
-        "birthday": "1990-01-01T00:00:00Z",
-        "occupation": "Developer",
-        "biography": "...",
-        "location_name": "Tokyo"
+        "first_name": "string or null",
+        "last_name": "string or null",
+        "username": "string or null",
+        "gender": "string or null (male, female, other)",
+        "sexual_preference": "string or null (heterosexual, homosexual, bisexual)",
+        "birthday": "string or null (timestamp)",
+        "occupation": "string or null",
+        "biography": "string or null",
+        "location_name": "string or null"
     }
     ```
+-   **Response:** `UserProfile Object`
+    ```json
+    {
+        "user_id": "string (UUID)",
+        "first_name": "string or null",
+        "last_name": "string or null",
+        "username": "string or null",
+        "gender": "string or null (e.g., male, female, other)",
+        "sexual_preference": "string or null (e.g., heterosexual, homosexual, bisexual)",
+        "birthday": "string or null (timestamp)",
+        "occupation": "string or null",
+        "biography": "string or null",
+        "fame_rating": "integer or null",
+        "location_name": "string or null",
+        "distance": "number or null (float)"
+    }
+    ```
+
+### Upload Profile Picture
+
+-   **URL:** `/api/v1/me/profile/pictures`
+-   **Method:** `POST`
+-   **Request:** `multipart/form-data` with a file field named `image`. Requires Authorization header.
+-   **Response:** `Picture Object`
+    ```json
+    {
+        "id": "integer",
+        "user_id": "string (UUID)",
+        "url": "string (URL)",
+        "is_profile_pic": "boolean or null",
+        "created_at": "string (timestamp)"
+    }
+    ```
+
 -   **Response:**
     ```json
-    { /* user_profile object */ }
+    {
+        "message": "Picture deleted successfully"
+    }
     ```
+
     
 ### Get Who Liked Me
 
@@ -368,7 +414,7 @@ This document outlines the API endpoints for the Matcha application.
     -   Query Params: `age_min`, `age_max`, `gender`
 -   **Response:**
     ```json
-    [ /* array of user_profile objects */ ]
+    [ /* array of UserProfile Objects */ ]
     ```
     
 ### Get Recommended Profiles
@@ -378,7 +424,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** Requires Authorization header.
 -   **Response:**
     ```json
-    [ /* array of user_profile objects, sorted by recommendation score */ ]
+    [ /* array of UserProfile Objects, sorted by recommendation score */ ]
     ```
 
 ### Get a Specific User's Profile
@@ -386,9 +432,22 @@ This document outlines the API endpoints for the Matcha application.
 -   **URL:** `/api/v1/users/{userID}/profile`
 -   **Method:** `GET`
 -   **Request:** URL parameter `userID`. Requires Authorization header.
--   **Response:**
+-   **Response:** `UserProfile Object`
     ```json
-    { /* user_profile object */ }
+    {
+        "user_id": "string (UUID)",
+        "first_name": "string or null",
+        "last_name": "string or null",
+        "username": "string or null",
+        "gender": "string or null (e.g., male, female, other)",
+        "sexual_preference": "string or null (e.g., heterosexual, homosexual, bisexual)",
+        "birthday": "string or null (timestamp)",
+        "occupation": "string or null",
+        "biography": "string or null",
+        "fame_rating": "integer or null",
+        "location_name": "string or null",
+        "distance": "number or null (float)"
+    }
     ```
 
 ---
@@ -402,7 +461,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** (No parameters)
 -   **Response:**
     ```json
-    [ /* array of tag objects */ ]
+    [ /* array of Tag Objects */ ]
     ```
 
 ---
@@ -419,7 +478,7 @@ This document outlines the API endpoints for the Matcha application.
     -   Requires Authorization header.
 -   **Response:**
     ```json
-    [ /* array of message objects */ ]
+    [ /* array of Message Objects */ ]
     ```
 
 ---
@@ -451,7 +510,7 @@ This document outlines the API endpoints for the Matcha application.
             "id": "message_id"
         }
         ```
-    -   **Server -> Client (Notification):**
+    -   **Server -> Client (Notification):
         ```json
         {
             "type": "notification",
@@ -468,3 +527,141 @@ This document outlines the API endpoints for the Matcha application.
             "status": "online"
         }
         ```
+
+---
+
+## Data Models
+
+### Like Object
+
+Represents a user's like action.
+
+```json
+{
+    "liker_id": "string (UUID)",
+    "liked_id": "string (UUID)",
+    "created_at": "string (timestamp)"
+}
+
+### Tag Object
+
+Represents a user-defined tag.
+
+```json
+{
+    "id": "integer",
+    "name": "string"
+}
+
+### View Object
+
+Represents a user's view action.
+
+```json
+{
+    "viewer_id": "string (UUID)",
+    "viewed_id": "string (UUID)",
+    "view_time": "string (timestamp)"
+}
+
+### Block Object
+
+Represents a user's block action.
+
+```json
+{
+    "blocker_id": "string (UUID)",
+    "blocked_id": "string (UUID)"
+}
+
+### UserData Object
+
+Represents additional user data like location and internal scoring.
+
+```json
+{
+    "user_id": "string (UUID)",
+    "latitude": "number or null (float)",
+    "longitude": "number or null (float)",
+    "internal_score": "integer or null"
+}
+
+### Picture Object
+
+Represents a user's uploaded picture.
+
+```json
+{
+    "id": "integer",
+    "user_id": "string (UUID)",
+    "url": "string (URL)",
+    "is_profile_pic": "boolean or null",
+    "created_at": "string (timestamp)"
+}
+
+
+
+### Connection Object
+
+Represents a mutual like between two users.
+
+```json
+{
+    "user1_id": "string (UUID)",
+    "user2_id": "string (UUID)",
+    "created_at": "string (timestamp)"
+}
+
+
+
+```
+```
+
+### UserProfile Object
+
+Represents a user's profile information.
+
+```json
+{
+    "user_id": "string (UUID)",
+    "first_name": "string or null",
+    "last_name": "string or null",
+    "username": "string or null",
+    "gender": "string or null (e.g., male, female, other)",
+    "sexual_preference": "string or null (e.g., heterosexual, homosexual, bisexual)",
+    "birthday": "string or null (timestamp)",
+    "occupation": "string or null",
+    "biography": "string or null",
+    "fame_rating": "integer or null",
+    "location_name": "string or null",
+        "distance": "number or null (float)"
+    }
+    
+    ### Message Object
+    
+    Represents a chat message.
+    
+    ```json
+    {
+        "id": "integer",
+        "sender_id": "string (UUID)",
+        "recipient_id": "string (UUID)",
+        "content": "string",
+        "sent_at": "string (timestamp)",
+            "is_read": "boolean or null"
+        }
+        
+        ### Notification Object
+        
+        Represents a user notification.
+        
+        ```json
+        {
+            "id": "integer",
+            "recipient_id": "string (UUID)",
+            "sender_id": "string (UUID) or null",
+            "type": "string (e.g., like, view, message)",
+            "is_read": "boolean or null",
+            "created_at": "string (timestamp)"
+        }
+        ```    

@@ -11,7 +11,7 @@ services:
       - filesrv
       - wsgateway
     env_file: ./api/.env
-  
+
   wsgateway:
     build:
       context: ./wsgateway
@@ -43,6 +43,7 @@ services:
       - api
       - wsgateway
       - filesrv
+      - web
     restart: always
 
   db:
@@ -58,18 +59,18 @@ services:
       - ./db/schema/schema.sql:/docker-entrypoint-initdb.d/10_schema.sql
       - ./db/seed/seed.sql:/docker-entrypoint-initdb.d/20_seed.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
-  
+
   redis:
     image: redis:7-alpine
     container_name: redis_cache
     restart: always
 
   # --- Tooling Services (start with --profile tools) ---
-  
+
   adminer:
     image: adminer
     restart: always
@@ -77,12 +78,12 @@ services:
       - "8080:8080"
     profiles:
       - tools
-  
+
   seeder:
     build:
       context: ./api
       dockerfile: Dockerfile
-    command: ["./db-seeder"]
+    command: [ "./db-seeder" ]
     depends_on:
       - db
       - filesrv
@@ -101,18 +102,16 @@ services:
       - redis
     profiles:
       - tools
-  
-  tbls:
-    image: k1low/tbls
-    container_name: tbls
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+    container_name: web
+    restart: always
+    # env_file: ./web/.env
     depends_on:
-      - db
-    volumes:
-      - .:/app
-    environment:
-      DB_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
-    profiles:
-      - tools
+      - api
 
 volumes:
   pgdata:

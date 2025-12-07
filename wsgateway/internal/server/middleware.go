@@ -32,18 +32,28 @@ const (
 func AuthMiddleware(jwtSigningKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				http.Error(w, "Authorization header is required", http.StatusUnauthorized)
-				return
+			// First, try to get the token from the query parameter
+			tokenString := r.URL.Query().Get("token")
+
+			// If not in query, try to get from Authorization header
+			if tokenString == "" {
+				authHeader := r.Header.Get("Authorization")
+				if authHeader == "" {
+					http.Error(w, "Authorization header or token query parameter is required", http.StatusUnauthorized)
+					return
+				}
+				parts := strings.Split(authHeader, " ")
+				if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+					http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+					return
+				}
+				tokenString = parts[1]
 			}
 
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			if tokenString == "" {
+				http.Error(w, "Token is missing", http.StatusUnauthorized)
 				return
 			}
-			tokenString := parts[1]
 
 			claims, err := VerifyAccessToken(tokenString, jwtSigningKey)
 			if err != nil {

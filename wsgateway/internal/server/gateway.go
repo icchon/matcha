@@ -142,6 +142,7 @@ func (g *Gateway) registerConnection(ctx context.Context, userID uuid.UUID, conn
 	g.connections[userID] = conn
 	g.rdb.Set(ctx, fmt.Sprintf("user:status:%s", userID), "online", 0)
 	g.rdb.Publish(ctx, string(PresenceIncomingChannel), fmt.Sprintf(`{"user_id":"%s","status":"online"}`, userID))
+	log.Printf("User %s registered.", userID)
 }
 
 func (g *Gateway) deregisterConnection(ctx context.Context, userID uuid.UUID, conn *websocket.Conn) {

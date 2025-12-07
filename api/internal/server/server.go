@@ -72,14 +72,13 @@ func NewServer(
 		log.Printf("Invalid SMTP_PORT: %v", err)
 		return nil
 	}
-	_ = smtp.NewSmtpClient(client.MailConfig{
+	mailClient := smtp.NewSmtpClient(client.MailConfig{ // Use real SmtpClient
 		Host:     config.SmtpHost,
 		Port:     port,
 		Username: config.SmtpUsername,
 		Password: config.SmtpPassword,
 		From:     config.SmtpSender,
 	})
-	mockMailClient := smtp.NewMockMailClient()
 	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
 	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
 
@@ -107,7 +106,7 @@ func NewServer(
 
 	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, notificationPub)
 	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService, userDataRepository, userTagRepository, tagRepository)
-	mailService := mail.NewApplicationMailService(mockMailClient, config.BaseUrl)
+	mailService := mail.NewApplicationMailService(mailClient, config.BaseUrl) // Use real mailClient
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
 	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, notificationService, userTagRepository, userDataRepository)
 	chatService := chat.NewChatService(connectionRepo, messageRepository, profileService)
@@ -134,8 +133,8 @@ func NewServer(
 		notificationService,
 	)
 
-	subscriverService := subsvc.NewSubscriberService(chatSub, presenceSub, readSub, subscHandler)
-	if err := subscriverService.Initialize(context.Background()); err != nil {
+	subscriberService := subsvc.NewSubscriberService(chatSub, presenceSub, readSub, subscHandler)
+	if err := subscriberService.Initialize(context.Background()); err != nil {
 		log.Printf("Failed to initialize subscriber service: %v", err)
 		return nil
 	}
@@ -174,6 +173,7 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 			r.Post("/oauth/github/login", ah.GithubLoginHandler)
 			r.Post("/password/forgot", ah.PasswordResetHandler)
 			r.Post("/password/reset", ah.PasswordResetConfirmHandler)
+			r.Post("/refresh", ah.RefreshAccessTokenHandler)
 		})
 
 		r.Route("/users", func(r chi.Router) {
@@ -183,7 +183,9 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 					r.Post("/like", uh.LikeUserHandler)
 					r.Delete("/like", uh.UnlikeUserHandler)
 					r.Post("/block", uh.BlockUserHandler)
+					r.Delete("/block", uh.UnblockUserHandler)
 					r.Get("/profile", ph.GetUserProfileHandler)
+					r.Get("/pictures", ph.GetUserPicturesHandler)
 				})
 			})
 		})
@@ -212,8 +214,11 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 			r.Route("/profile", func(r chi.Router) {
 				r.Post("/", ph.CreateProfileHandler)
 				r.Put("/", ph.UpdateProfileHandler)
+				r.Get("/", ph.GetProfileHandler)
+				r.Get("/pictures", ph.GetMyPicturesHandler)
 				r.Post("/pictures", ph.UploadProfilePictureHandler)
 				r.Delete("/pictures/{pictureID}", ph.DeleteProfilePictureHandler)
+				r.Put("/pictures/{pictureID}/status", ph.UpdatePictureStatusHandler)
 				r.Get("/likes", ph.GetWhoLikeMeListHandler)
 				r.Get("/views", ph.GetWhoViewedMeListHandler)
 			})
