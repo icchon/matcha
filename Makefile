@@ -46,3 +46,6 @@ web-test:
 
 web-lint:
 	cd web && npm run lint
+
+web-format:
+	cd web && npm run format
