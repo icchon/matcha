@@ -342,3 +342,6 @@ file-server
 api-server
 ws-server
 db-seeder
+
+# Claude Code
+.claude/settings.local.json
