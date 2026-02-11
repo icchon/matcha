@@ -83,7 +83,11 @@ type GetMyLikedListResponse struct {
 
 // /users/me/likes GET
 func (h *UserHandler) GetMyLikedListHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
 	likes, err := h.userService.FindMyLikedList(r.Context(), userID)
 	if err != nil {
 		helper.HandleError(w, err)
@@ -101,7 +105,11 @@ type GetMyViewedListResponse struct {
 
 // /users/me/views GET
 func (h *UserHandler) GetMyViewedListHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
 	views, err := h.userService.FindMyViewedList(r.Context(), userID)
 	if err != nil {
 		helper.HandleError(w, err)
@@ -115,7 +123,11 @@ func (h *UserHandler) GetMyViewedListHandler(w http.ResponseWriter, r *http.Requ
 
 // users/me DELETE
 func (h *UserHandler) DeleteMyAccountHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
 	if err := h.userService.DeleteUser(r.Context(), userID); err != nil {
 		helper.HandleError(w, err)
 		return
@@ -129,7 +141,11 @@ type GetMyBlockedListResponse struct {
 
 // /users/me/blocks GET
 func (h *UserHandler) GetMyBlockedListHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
 	blocks, err := h.userService.FindBlockList(r.Context(), userID)
 	if err != nil {
 		helper.HandleError(w, err)
@@ -241,7 +257,13 @@ func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	helper.RespondWithJSON(w, http.StatusOK, userData)
+	updated, err := h.userService.GetUserData(r.Context(), userID)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, updated)
 }
 
 // GetAllTagsHandler handles GET /tags

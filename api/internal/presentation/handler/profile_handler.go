@@ -161,9 +161,12 @@ func (h *ProfileHandler) UpdateProfileHandler(w http.ResponseWriter, r *http.Req
 
 // /profile/pictures POST
 func (h *ProfileHandler) UploadProfilePictureHandler(w http.ResponseWriter, r *http.Request) {
+	const maxUploadSize = 5 << 20 // 5 MB
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
 	if !ok {
-		helper.HandleError(w, apperrors.ErrInternalServer)
+		helper.HandleError(w, apperrors.ErrUnauthorized)
 		return
 	}
 
@@ -176,7 +179,19 @@ func (h *ProfileHandler) UploadProfilePictureHandler(w http.ResponseWriter, r *h
 
 	image, err := io.ReadAll(file)
 	if err != nil {
-		helper.HandleError(w, apperrors.ErrInternalServer)
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	contentType := http.DetectContentType(image)
+	allowedTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/gif":  true,
+		"image/webp": true,
+	}
+	if !allowedTypes[contentType] {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
 

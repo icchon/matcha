@@ -18,7 +18,7 @@ func TestUnitOfWork_Do(t *testing.T) {
 		name        string
 		fnError     error
 		expectation func(mock sqlmock.Sqlmock)
-		expectedErr error
+		expectedErr string
 	}{
 		{
 			name:    "Success - fn succeeds and commit is called",
@@ -27,7 +27,7 @@ func TestUnitOfWork_Do(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectCommit()
 			},
-			expectedErr: nil,
+			expectedErr: "",
 		},
 		{
 			name:    "fn returns error - Do returns fn error, not rollback error",
@@ -36,7 +36,15 @@ func TestUnitOfWork_Do(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectRollback()
 			},
-			expectedErr: fnErr,
+			expectedErr: fnErr.Error(),
+		},
+		{
+			name:    "BeginTxx fails - Do returns begin error",
+			fnError: nil,
+			expectation: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin().WillReturnError(errors.New("connection refused"))
+			},
+			expectedErr: "connection refused",
 		},
 	}
 
@@ -55,8 +63,15 @@ func TestUnitOfWork_Do(t *testing.T) {
 				return tc.fnError
 			})
 
-			assert.Equal(t, tc.expectedErr, err,
-				"Do() should return the fn error when fn fails, not the rollback error. Check that uow.go returns err instead of tx.Rollback().")
+			if tc.expectedErr == "" {
+				assert.NoError(t, err,
+					"Do() should succeed when fn and commit succeed.")
+			} else {
+				assert.Error(t, err,
+					"Do() should return an error.")
+				assert.Contains(t, err.Error(), tc.expectedErr,
+					"Do() should return the expected error. Got: %v", err)
+			}
 			assert.NoError(t, mock.ExpectationsWereMet(),
 				"SQL expectations not met. Verify that Rollback is called on fn error, and Commit on fn success.")
 		})
