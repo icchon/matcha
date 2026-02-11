@@ -172,3 +172,104 @@ func (mr *MockUserServiceMockRecorder) UnlikeUser(ctx, likerID, likedID any) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlikeUser", reflect.TypeOf((*MockUserService)(nil).UnlikeUser), ctx, likerID, likedID)
 }
+
+// GetUserData mocks base method.
+func (m *MockUserService) GetUserData(ctx context.Context, userID uuid.UUID) (*entity.UserData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserData", ctx, userID)
+	ret0, _ := ret[0].(*entity.UserData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserData indicates an expected call of GetUserData.
+func (mr *MockUserServiceMockRecorder) GetUserData(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserData", reflect.TypeOf((*MockUserService)(nil).GetUserData), ctx, userID)
+}
+
+// CreateUserData mocks base method.
+func (m *MockUserService) CreateUserData(ctx context.Context, userData *entity.UserData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateUserData", ctx, userData)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateUserData indicates an expected call of CreateUserData.
+func (mr *MockUserServiceMockRecorder) CreateUserData(ctx, userData any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserData", reflect.TypeOf((*MockUserService)(nil).CreateUserData), ctx, userData)
+}
+
+// UpdateUserData mocks base method.
+func (m *MockUserService) UpdateUserData(ctx context.Context, userData *entity.UserData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateUserData", ctx, userData)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateUserData indicates an expected call of UpdateUserData.
+func (mr *MockUserServiceMockRecorder) UpdateUserData(ctx, userData any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserData", reflect.TypeOf((*MockUserService)(nil).UpdateUserData), ctx, userData)
+}
+
+// GetAllTags mocks base method.
+func (m *MockUserService) GetAllTags(ctx context.Context) ([]*entity.Tag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllTags", ctx)
+	ret0, _ := ret[0].([]*entity.Tag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllTags indicates an expected call of GetAllTags.
+func (mr *MockUserServiceMockRecorder) GetAllTags(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllTags", reflect.TypeOf((*MockUserService)(nil).GetAllTags), ctx)
+}
+
+// GetUserTags mocks base method.
+func (m *MockUserService) GetUserTags(ctx context.Context, userID uuid.UUID) ([]*entity.Tag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserTags", ctx, userID)
+	ret0, _ := ret[0].([]*entity.Tag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserTags indicates an expected call of GetUserTags.
+func (mr *MockUserServiceMockRecorder) GetUserTags(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserTags", reflect.TypeOf((*MockUserService)(nil).GetUserTags), ctx, userID)
+}
+
+// AddUserTag mocks base method.
+func (m *MockUserService) AddUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddUserTag", ctx, userID, tagID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddUserTag indicates an expected call of AddUserTag.
+func (mr *MockUserServiceMockRecorder) AddUserTag(ctx, userID, tagID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddUserTag", reflect.TypeOf((*MockUserService)(nil).AddUserTag), ctx, userID, tagID)
+}
+
+// DeleteUserTag mocks base method.
+func (m *MockUserService) DeleteUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUserTag", ctx, userID, tagID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUserTag indicates an expected call of DeleteUserTag.
+func (mr *MockUserServiceMockRecorder) DeleteUserTag(ctx, userID, tagID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserTag", reflect.TypeOf((*MockUserService)(nil).DeleteUserTag), ctx, userID, tagID)
+}

@@ -236,6 +236,11 @@ func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Req
 	}
 	userData.UserID = userID
 
+	if err := h.userService.UpdateUserData(r.Context(), &userData); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
 	helper.RespondWithJSON(w, http.StatusOK, userData)
 }
 
