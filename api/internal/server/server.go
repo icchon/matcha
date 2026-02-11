@@ -6,10 +6,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/go-redis/redis/v8"
@@ -42,6 +44,7 @@ type Config struct {
 	GithubClientSecret  string
 	RidirectURI         string
 	ImageUploadEndpoint string
+	AllowedOrigins      string
 
 	SmtpHost     string
 	SmtpPort     string
@@ -153,6 +156,14 @@ func NewServer(
 }
 
 func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler, ah *handler.AuthHandler, ph *handler.ProfileHandler, ch *handler.ChatHandler, nh *handler.NotificationHandler) {
+	s.router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   strings.Split(s.config.AllowedOrigins, ","),
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 	s.router.Use(middleware.RequestID)
 	s.router.Use(middleware.Logger)
 	s.router.Use(middleware.Recoverer)

@@ -37,6 +37,7 @@ func checkEnv() error {
 		"SMTP_SENDER",
 		"BASE_URL",
 		"REDIS_ADDR",
+		"ALLOWED_ORIGINS",
 	}
 
 	for _, envKey := range envKeys {
@@ -81,6 +82,7 @@ func main() {
 		SmtpSender:          getEnv("SMTP_SENDER"),
 		BaseUrl:             getEnv("BASE_URL"),
 		ImageUploadEndpoint: getEnv("IMAGE_UPLOAD_ENDPOINT"),
+		AllowedOrigins:      getEnv("ALLOWED_ORIGINS"),
 	}
 
 	db, err := sqlx.Connect("postgres", getEnv("DATABASE_URL"))

@@ -5,6 +5,7 @@ go 1.25.4
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/cors v1.2.2
 	github.com/go-faker/faker/v4 v4.7.0 // direct
 	github.com/go-mail/mail v2.3.1+incompatible
 	github.com/go-redis/redis/v8 v8.11.5

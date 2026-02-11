@@ -11,6 +11,8 @@ services:
       - filesrv
       - wsgateway
     env_file: ./api/.env
+    environment:
+      ALLOWED_ORIGINS: "http://localhost:5173"
   
   wsgateway:
     build:
