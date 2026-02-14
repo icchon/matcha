@@ -18,11 +18,13 @@ const ChangePasswordForm: FC = () => {
   });
 
   const onSubmit = async (data: ChangePasswordFormData) => {
-    await changePassword({
+    const success = await changePassword({
       currentPassword: data.currentPassword,
       newPassword: data.newPassword,
     });
-    reset();
+    if (success) {
+      reset();
+    }
   };
 
   return (
