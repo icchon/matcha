@@ -7,6 +7,7 @@ interface OnlineIndicatorProps {
 
 function formatLastSeen(dateString: string): string {
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Offline';
   return `Last seen ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 

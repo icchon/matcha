@@ -19,6 +19,7 @@ function getProfilePicUrl(profile: UserProfileDetail): string | null {
 function calculateAge(birthday: string | null): number | null {
   if (!birthday) return null;
   const birth = new Date(birthday);
+  if (isNaN(birth.getTime())) return null;
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   const monthDiff = now.getMonth() - birth.getMonth();

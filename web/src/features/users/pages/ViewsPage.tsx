@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, type FC } from 'react';
+import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/Spinner';
 import { ProfileCard } from '@/features/users/components/ProfileCard';
 import * as usersApi from '@/api/users';
@@ -35,8 +36,9 @@ const ViewsPage: FC = () => {
 
       setViewedByMeProfiles(viewedIds.map((id) => profileMap.get(id)).filter(Boolean) as UserProfileDetail[]);
       setWhoViewedMeProfiles(viewerIds.map((id) => profileMap.get(id)).filter(Boolean) as UserProfileDetail[]);
-    } catch {
-      // Non-critical: empty lists shown on error
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load views';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

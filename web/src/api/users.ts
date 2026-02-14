@@ -4,11 +4,29 @@ import type { LikeUserResponse, Like, View, MessageResponse, Tag, Picture } from
 import type { UserProfileDetail } from '@/types';
 import type { RawUserProfileResponse, RawLike, RawView, RawPicture } from '@/types/raw';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validateUserId(userId: string): string {
+  if (!UUID_REGEX.test(userId)) {
+    throw new Error('Invalid user ID format');
+  }
+  return userId;
+}
+
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.pathname.startsWith('/');
+  } catch {
+    return false;
+  }
+}
+
 function mapPicture(raw: RawPicture): Picture {
   return {
     id: raw.id,
     userId: raw.user_id,
-    url: raw.url,
+    url: isSafeImageUrl(raw.url) ? raw.url : '',
     isProfilePic: raw.is_profile_pic,
     createdAt: raw.created_at,
   };
@@ -52,28 +70,29 @@ function mapView(raw: RawView): View {
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfileDetail> {
-  const raw = await apiClient.get<RawUserProfileResponse>(API_PATHS.PROFILE.GET(userId));
+  const raw = await apiClient.get<RawUserProfileResponse>(API_PATHS.PROFILE.GET(validateUserId(userId)));
   return mapUserProfileResponse(raw);
 }
 
 export async function likeUser(userId: string): Promise<LikeUserResponse> {
-  return apiClient.post<LikeUserResponse>(API_PATHS.USERS.LIKE(userId));
+  return apiClient.post<LikeUserResponse>(API_PATHS.USERS.LIKE(validateUserId(userId)));
 }
 
 export async function unlikeUser(userId: string): Promise<void> {
-  await apiClient.delete(API_PATHS.USERS.UNLIKE(userId));
+  await apiClient.delete(API_PATHS.USERS.UNLIKE(validateUserId(userId)));
 }
 
 export async function blockUser(userId: string): Promise<void> {
-  await apiClient.post<undefined>(API_PATHS.USERS.BLOCK(userId));
+  await apiClient.post<undefined>(API_PATHS.USERS.BLOCK(validateUserId(userId)));
 }
 
 // [MOCK] BE-08 #25: endpoint not yet implemented
 export async function unblockUser(userId: string): Promise<void> {
-  await apiClient.delete(API_PATHS.USERS.UNBLOCK(userId));
+  await apiClient.delete(API_PATHS.USERS.UNBLOCK(validateUserId(userId)));
 }
 
 // [MOCK] BE-08 #25: endpoint not yet implemented
+// TODO(FE-XX): Add report reason selection UI before BE-08 #25 is implemented
 export async function reportUser(_userId: string, _reason: string): Promise<MessageResponse> {
   return { message: 'Report submitted' };
 }
