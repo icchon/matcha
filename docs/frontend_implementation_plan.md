@@ -1,5 +1,7 @@
 # Frontend Implementation Plan
 
+> Last updated: 2026-02-14
+
 ## Overview
 
 Backend (Go) has basic features implemented. Frontend (React + Vite + TS) scaffold is complete (FE-01 merged). This plan covers FE-02 through FE-11 implementation with parallel agent development.
@@ -12,13 +14,25 @@ Backend (Go) has basic features implemented. Frontend (React + Vite + TS) scaffo
 
 ---
 
+## Progress
+
+| Phase | Issue | Status | PR | Tests |
+|-------|-------|--------|-----|-------|
+| 1 | FE-02 (#8) | **Complete** | #33 | 104 |
+| 2 | FE-03 (#9) | Pending | — | — |
+| 3 | FE-04 (#10), FE-07 (#13), FE-08 (#14), FE-11 (#17) | Pending | — | — |
+| 4 | FE-05 (#11), FE-09 (#15), FE-10 (#16) | Pending | — | — |
+| 5 | FE-06 (#12) | Pending | — | — |
+
+---
+
 ## Dependency Graph
 
 ```
-FE-01 (Complete)
+FE-01 ✅
   |
   v
-FE-02 (#8) Layout / UI Foundation
+FE-02 (#8) ✅ Layout / UI Foundation
   |
   v
 FE-03 (#9) Authentication
@@ -41,21 +55,9 @@ Search
 
 ## Known Issues
 
-### 1. `constants.ts` API Path Mismatches (Fix in Phase 1)
+### 1. `constants.ts` API Path Mismatches — RESOLVED in Phase 1
 
-| constants.ts value | Actual route | Status |
-|---|---|---|
-| `USERS.MY_LIKES: '/users/me/likes'` | `/me/likes` | Mismatch |
-| `USERS.MY_VIEWS: '/users/me/views'` | `/me/views` | Mismatch |
-| `USERS.DELETE_ME: '/users/me'` | `/me/` | Mismatch |
-| `USERS.MY_BLOCKS: '/users/me/blocks'` | `/me/blocks` | Mismatch |
-| `USERS.MY_DATA: '/users/me/data'` | `/me/data/` | Mismatch |
-| `USERS.MY_TAGS: '/users/me/tags'` | `/me/tags/` | Mismatch |
-| `PROFILE.CREATE: '/profile'` | `/me/profile/` | Mismatch |
-| `PROFILE.UPDATE: '/profile'` | `/me/profile/` | Mismatch |
-| `PROFILE.PICTURES: '/profile/pictures'` | `/me/profile/pictures` | Mismatch |
-| `PROFILE.WHO_LIKED_ME: '/profile/likes'` | `/me/profile/likes` | Mismatch |
-| `PROFILE.WHO_VIEWED_ME: '/profile/views'` | `/me/profile/views` | Mismatch |
+11 箇所のパス不一致を修正済み。`CHATS`, `NOTIFICATIONS` グループも追加。
 
 ### 2. WebSocket Authentication
 
@@ -71,6 +73,19 @@ Search
 | `DELETE /users/{userID}/block` | Unblock user | FE-07 (#13), FE-11 (#17) | BE-08 (#25) |
 | `POST /users/{userID}/report` | Report user | FE-07 (#13) | BE-08 (#25) |
 | `PUT /me/notifications/{id}/read` | Mark notification read | FE-10 (#16) | BE-08 (#25) |
+
+### 4. Security Review Findings (Phase 1)
+
+Phase 1 の security-reviewer で検出された HIGH 項目。Phase 2 以降で対応:
+
+| ID | Issue | Resolution |
+|----|-------|-----------|
+| H-1 | localStorage にトークン保存 (XSS リスク) | FE-03 + BE 連携で HttpOnly Cookie 移行を検討 |
+| H-2 | トークンリフレッシュ機構なし | FE-03 で 401 インターセプタ + リフレッシュ実装 |
+
+### 5. apiClient 構造改善 (Phase 2 で対応)
+
+Phase 1 レビューで `apiClient` の各メソッド (`get`/`post`/`put`/`delete`) の fetch パターン重複が指摘された。FE-03 でトークンリフレッシュの 401 インターセプタを追加するタイミングで、共通 `request()` ベースメソッドへのリファクタリングを行う。
 
 ---
 
@@ -93,31 +108,46 @@ Search
 
 ---
 
-## Phase 1: Foundation (FE-02) - 1 agent
+## Phase 1: Foundation (FE-02) — COMPLETE
 
-**Issue**: #8 | **Blocks**: FE-03 and all subsequent
+**Issue**: #8 | **PR**: #33 | **Branch**: `feat/fe-02-layout` | **Tests**: 104
 
-1. Fix `constants.ts` API path mismatches + update tests
-2. Add `upload()` method to `apiClient` (FormData support) + tests
-3. UI components (`components/ui/`) with tests first:
-   - `Button`, `Input`, `Modal`, `Card`, `Badge`, `Spinner`
-4. Layout components (`components/layout/`) + tests:
-   - `Layout`, `Header`, `Footer`
-5. `ProtectedRoute` (`components/common/`) + test (unauthenticated redirect)
-6. `App.tsx` route structure definition
-7. Sonner Toaster in `App.tsx`
+### Deliverables
 
-## Phase 2: Authentication (FE-03) - 1 agent
+| Category | Files |
+|----------|-------|
+| API path fixes | `constants.ts` — 11 mismatches fixed, `CHATS`/`NOTIFICATIONS` groups added |
+| apiClient | `client.ts` — `upload()` method (FormData), immutable header builders |
+| UI components | `Button`, `Input`, `Modal`, `Card`, `Badge`, `Spinner` |
+| Layout components | `Header` (auth-aware nav), `Footer`, `Layout` |
+| Routing | `ProtectedRoute`, `App.tsx` (full route structure + Sonner Toaster) |
+| Auth store fixes | Base64URL decoding, runtime type guards for JWT payload |
 
-**Issue**: #9 | **Depends**: FE-02 | **Blocks**: FE-04, FE-07, FE-08, FE-11
+### Review Results
 
-1. Zod validation schemas (`lib/validators.ts`) + tests (valid/invalid cases)
-2. API functions (`api/auth.ts`) + tests (apiClient mock)
-3. Auth hook (`features/auth/hooks/useAuth.ts`) + tests
-4. Auth components + tests: `LoginForm`, `SignupForm`, `OAuthButtons`
-5. Auth pages + tests: `LoginPage`, `SignupPage`, `VerifyEmailPage`, `ForgotPasswordPage`, `ResetPasswordPage`
+| Reviewer | Result |
+|----------|--------|
+| code-reviewer | Approve (WARNING 3 件修正済み) |
+| security-reviewer | CRITICAL: 0, HIGH: 2 (FE-03/BE scope), M-2 修正済み |
 
-## Phase 3: Parallel Development - 3 agents
+---
+
+## Phase 2: Authentication (FE-03) — 1 agent
+
+**Issue**: #9 | **Depends**: FE-02 ✅ | **Blocks**: FE-04, FE-07, FE-08, FE-11
+
+### Tasks
+
+1. `apiClient` リファクタリング: 共通 `request()` メソッド + 401 インターセプタ (H-2 対応)
+2. Zod validation schemas (`lib/validators.ts`) + tests (valid/invalid cases)
+3. API functions (`api/auth.ts`) + tests (apiClient mock)
+4. Auth hook (`features/auth/hooks/useAuth.ts`) + tests
+5. Auth components + tests: `LoginForm`, `SignupForm`, `OAuthButtons`
+6. Auth pages + tests: `LoginPage`, `SignupPage`, `VerifyEmailPage`, `ForgotPasswordPage`, `ResetPasswordPage`
+
+---
+
+## Phase 3: Parallel Development — 3 agents
 
 After FE-03 completion, 3 independent tracks run concurrently.
 
@@ -151,7 +181,9 @@ After FE-03 completion, 3 independent tracks run concurrently.
 - `useWebSocket` hook tests -> implementation: auto connect/disconnect on auth state change
 - `chatStore.ts` / `notificationStore.ts` placeholders (interfaces only) + tests
 
-## Phase 4: Parallel Development - 3 agents
+---
+
+## Phase 4: Parallel Development — 3 agents
 
 Second parallel phase after Phase 3 completion.
 
@@ -180,7 +212,9 @@ Second parallel phase after Phase 3 completion.
 - Component tests -> implementation: `NotificationBell` (Header integration), `NotificationList`, `NotificationItem`
 - Sonner toast integration tests -> implementation
 
-## Phase 5: Search (FE-06) - 1 agent
+---
+
+## Phase 5: Search (FE-06) — 1 agent
 
 **Issue**: #12 | **Depends**: FE-05
 
@@ -192,16 +226,16 @@ Second parallel phase after Phase 3 completion.
 
 ## Shared Component Dependency Map
 
-| Component | Created In | Used By |
-|---|---|---|
-| `Button`, `Input`, `Modal`, `Card`, `Badge`, `Spinner` | Phase 1 (FE-02) | All features |
-| `Layout`, `Header`, `Footer` | Phase 1 (FE-02) | All pages |
-| `ProtectedRoute` | Phase 1 (FE-02) | All authenticated pages |
-| `ProfileCard` | Phase 3 (FE-07) | FE-05, FE-06, FE-11 |
-| `OnlineIndicator` | Phase 3 (FE-07) | FE-09 (Chat) |
-| `TagManager` | Phase 3 (FE-04) | FE-06 (Search) |
-| `FilterPanel`, `SortControls` | Phase 4 (FE-05) | FE-06 (Search) |
-| `NotificationBell` | Phase 4 (FE-10) | Header |
+| Component | Created In | Status | Used By |
+|---|---|---|---|
+| `Button`, `Input`, `Modal`, `Card`, `Badge`, `Spinner` | Phase 1 (FE-02) | **Done** | All features |
+| `Layout`, `Header`, `Footer` | Phase 1 (FE-02) | **Done** | All pages |
+| `ProtectedRoute` | Phase 1 (FE-02) | **Done** | All authenticated pages |
+| `ProfileCard` | Phase 3 (FE-07) | Pending | FE-05, FE-06, FE-11 |
+| `OnlineIndicator` | Phase 3 (FE-07) | Pending | FE-09 (Chat) |
+| `TagManager` | Phase 3 (FE-04) | Pending | FE-06 (Search) |
+| `FilterPanel`, `SortControls` | Phase 4 (FE-05) | Pending | FE-06 (Search) |
+| `NotificationBell` | Phase 4 (FE-10) | Pending | Header |
 
 ---
 
@@ -213,4 +247,3 @@ Second parallel phase after Phase 3 completion.
 | `api/users.ts: reportUser()` | Success response stub | BE-08 (#25) | After BE impl |
 | `api/notifications.ts: markAsRead()` | Success response stub | BE-08 (#25) | After BE impl |
 | `wsStore.ts: connect()` | MockWebSocket for tests | BE-03 (#20) + nginx | After nginx config |
-| `constants.ts` | Paths fixed, integration test pending | - | docker compose up |
