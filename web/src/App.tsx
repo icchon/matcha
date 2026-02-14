@@ -11,6 +11,7 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from '@/features/auth/pages';
+import { SettingsPage } from '@/features/settings/pages/SettingsPage';
 
 // Placeholder page components - will be replaced in later phases
 function HomePage() {
@@ -51,10 +52,6 @@ function ViewsPage() {
 
 function NotificationsPage() {
   return <div>NotificationsPage</div>;
-}
-
-function SettingsPage() {
-  return <div>SettingsPage</div>;
 }
 
 function NotFoundPage() {
