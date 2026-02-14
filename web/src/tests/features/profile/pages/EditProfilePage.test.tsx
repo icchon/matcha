@@ -3,9 +3,13 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { EditProfilePage } from '@/features/profile/pages/EditProfilePage';
 import { useProfileStore } from '@/stores/profileStore';
+import { usePictureStore } from '@/stores/pictureStore';
+import { useTagStore } from '@/stores/tagStore';
 import type { UserProfile } from '@/types';
 
 vi.mock('@/stores/profileStore');
+vi.mock('@/stores/pictureStore');
+vi.mock('@/stores/tagStore');
 
 const sampleProfile: UserProfile = {
   userId: 'user-123',
@@ -29,35 +33,64 @@ const mockDeletePicture = vi.fn();
 const mockAddTag = vi.fn();
 const mockRemoveTag = vi.fn();
 
-function setupMockStore(overrides: Record<string, unknown> = {}) {
+function setupMockStores(overrides: Record<string, unknown> = {}) {
+  const profileState = {
+    profile: sampleProfile,
+    isLoading: false,
+    error: null,
+    saveProfile: mockSaveProfile,
+    fetchProfile: mockFetchProfile,
+    clearError: vi.fn(),
+    ...('profile' in overrides || 'isLoading' in overrides || 'error' in overrides
+      ? overrides
+      : {}),
+  };
+
+  const pictureState = {
+    pictures: [],
+    isLoading: false,
+    error: null,
+    uploadPicture: mockUploadPicture,
+    deletePicture: mockDeletePicture,
+    clearError: vi.fn(),
+  };
+
+  const tagState = {
+    tags: [{ id: 1, name: 'hiking' }],
+    allTags: [{ id: 1, name: 'hiking' }, { id: 2, name: 'cooking' }],
+    isLoading: false,
+    error: null,
+    fetchTags: mockFetchTags,
+    addTag: mockAddTag,
+    removeTag: mockRemoveTag,
+    clearError: vi.fn(),
+  };
+
   vi.mocked(useProfileStore).mockImplementation((selector: unknown) => {
-    const state = {
-      profile: sampleProfile,
-      pictures: [],
-      tags: [{ id: 1, name: 'hiking' }],
-      allTags: [{ id: 1, name: 'hiking' }, { id: 2, name: 'cooking' }],
-      isLoading: false,
-      error: null,
-      saveProfile: mockSaveProfile,
-      fetchProfile: mockFetchProfile,
-      fetchTags: mockFetchTags,
-      uploadPicture: mockUploadPicture,
-      deletePicture: mockDeletePicture,
-      addTag: mockAddTag,
-      removeTag: mockRemoveTag,
-      clearError: vi.fn(),
-      ...overrides,
-    };
     if (typeof selector === 'function') {
-      return (selector as (s: typeof state) => unknown)(state);
+      return (selector as (s: typeof profileState) => unknown)(profileState);
     }
-    return state;
+    return profileState;
+  });
+
+  vi.mocked(usePictureStore).mockImplementation((selector: unknown) => {
+    if (typeof selector === 'function') {
+      return (selector as (s: typeof pictureState) => unknown)(pictureState);
+    }
+    return pictureState;
+  });
+
+  vi.mocked(useTagStore).mockImplementation((selector: unknown) => {
+    if (typeof selector === 'function') {
+      return (selector as (s: typeof tagState) => unknown)(tagState);
+    }
+    return tagState;
   });
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
-  setupMockStore();
+  setupMockStores();
 });
 
 function renderPage() {
@@ -101,7 +134,7 @@ describe('EditProfilePage', () => {
   });
 
   it('shows loading spinner when isLoading', () => {
-    setupMockStore({ isLoading: true });
+    setupMockStores({ isLoading: true });
     renderPage();
 
     expect(
@@ -111,7 +144,7 @@ describe('EditProfilePage', () => {
   });
 
   it('displays error message when error is set', () => {
-    setupMockStore({ error: 'Failed to load profile' });
+    setupMockStores({ error: 'Failed to load profile' });
     renderPage();
 
     expect(

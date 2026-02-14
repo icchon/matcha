@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client';
 import { API_PATHS } from '@/lib/constants';
-import type { UserProfile, Picture, Tag, UserTag } from '@/types';
+import type { UserProfile } from '@/types';
 import type { Gender, SexualPreference } from '@/types';
 
 export interface CreateProfileRequest {
@@ -36,26 +36,4 @@ export async function updateProfile(params: UpdateProfileRequest): Promise<UserP
 
 export async function getMyProfile(): Promise<UserProfile> {
   return apiClient.get<UserProfile>(API_PATHS.PROFILE.CREATE);
-}
-
-export async function uploadPicture(file: File): Promise<Picture> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return apiClient.upload<Picture>(API_PATHS.PROFILE.PICTURES, formData);
-}
-
-export async function deletePicture(pictureId: number): Promise<void> {
-  await apiClient.delete(API_PATHS.PROFILE.DELETE_PICTURE(pictureId));
-}
-
-export async function getTags(): Promise<Tag[]> {
-  return apiClient.get<Tag[]>(API_PATHS.TAGS);
-}
-
-export async function addTag(tagId: number): Promise<UserTag> {
-  return apiClient.post<UserTag>(API_PATHS.USERS.MY_TAGS, { tagId });
-}
-
-export async function removeTag(tagId: number): Promise<void> {
-  await apiClient.delete(API_PATHS.USERS.DELETE_TAG(tagId));
 }
