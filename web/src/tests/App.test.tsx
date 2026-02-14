@@ -44,7 +44,7 @@ describe('App', () => {
     render(<App />);
 
     expect(
-      screen.getByText('LoginPage'),
+      screen.getByRole('heading', { name: /log in/i }),
       'Unauthenticated users visiting "/" should be redirected to /login. Check that ProtectedRoute redirects to /login when isAuthenticated is false.',
     ).toBeInTheDocument();
   });
@@ -56,7 +56,7 @@ describe('App', () => {
     render(<App />);
 
     expect(
-      screen.getByText('LoginPage'),
+      screen.getByRole('heading', { name: /log in/i }),
       'The /login route should render the LoginPage component. Check that the public route for /login is configured.',
     ).toBeInTheDocument();
   });

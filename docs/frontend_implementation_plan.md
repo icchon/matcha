@@ -10,7 +10,7 @@ Backend (Go) has basic features implemented. Frontend (React + Vite + TS) scaffo
 
 - **TDD**: RED -> GREEN -> IMPROVE for all phases
 - **Backend-independent**: All API calls are mockable. Unimplemented endpoints use stubs
-- **Parallel maximization**: Phase 3 and 4 run 3 agents concurrently
+- **Parallel maximization**: Phase 3 runs 4 agents concurrently, Phase 4 runs 3 agents concurrently
 
 ---
 
@@ -20,7 +20,7 @@ Backend (Go) has basic features implemented. Frontend (React + Vite + TS) scaffo
 |-------|-------|--------|-----|-------|
 | 1 | FE-02 (#8) | **Complete** | #33 | 104 |
 | 2 | FE-03 (#9) | Pending | — | — |
-| 3 | FE-04 (#10), FE-07 (#13), FE-08 (#14), FE-11 (#17) | Pending | — | — |
+| 3 | FE-04 (#10), FE-07 (#13), FE-08 (#14), FE-11 (#17) — 4 agents parallel | Pending | — | — |
 | 4 | FE-05 (#11), FE-09 (#15), FE-10 (#16) | Pending | — | — |
 | 5 | FE-06 (#12) | Pending | — | — |
 
@@ -39,13 +39,13 @@ FE-03 (#9) Authentication
   |
   +------------------------------+------------------+
   v                              v                  v
-FE-04 (#10)                FE-08 (#14)         FE-07 (#13) + FE-11 (#17)
-Profile Settings           WebSocket Foundation Profile View + Settings
-  |                              |
-  v                         +----+----+
-FE-05 (#11)                 v         v
-Browse/Discovery       FE-09 (#15) FE-10 (#16)
-  |                    Chat        Notifications
+FE-04 (#10)        FE-08 (#14)         FE-07 (#13)      FE-11 (#17)
+Profile Settings   WebSocket Foundation Profile View     Settings
+  |                      |
+  v                 +----+----+
+FE-05 (#11)         v         v
+Browse/Discovery FE-09 (#15) FE-10 (#16)
+  |              Chat        Notifications
   v
 FE-06 (#12)
 Search
@@ -80,7 +80,7 @@ Phase 1 の security-reviewer で検出された HIGH 項目。Phase 2 以降で
 
 | ID | Issue | Resolution |
 |----|-------|-----------|
-| H-1 | localStorage にトークン保存 (XSS リスク) | FE-03 + BE 連携で HttpOnly Cookie 移行を検討 |
+| H-1 | localStorage にトークン保存 (XSS リスク) | FE-03 でインメモリ保存 (Zustand store + closure) に移行。BE 変更不要。トレードオフ: ページリロード時に再ログインが必要 |
 | H-2 | トークンリフレッシュ機構なし | FE-03 で 401 インターセプタ + リフレッシュ実装 |
 
 ### 5. apiClient 構造改善 (Phase 2 で対応)
@@ -147,15 +147,16 @@ Phase 1 レビューで `apiClient` の各メソッド (`get`/`post`/`put`/`dele
 
 ---
 
-## Phase 3: Parallel Development — 3 agents
+## Phase 3: Parallel Development — 4 agents
 
-After FE-03 completion, 3 independent tracks run concurrently.
+After FE-03 completion, 4 independent tracks run concurrently. FE-11 depends only on FE-03 so it runs as a separate agent.
 
 | Agent | Issue | Tasks | Branch |
 |-------|-------|-------|--------|
 | A | FE-04 (#10) | Profile Settings | `feat/fe-04-profile` |
-| B | FE-07 (#13) -> FE-11 (#17) | Profile View -> Settings (sequential) | `feat/fe-07-profile-view` |
+| B | FE-07 (#13) | Profile View | `feat/fe-07-profile-view` |
 | C | FE-08 (#14) | WebSocket Foundation | `feat/fe-08-websocket` |
+| D | FE-11 (#17) | Settings / Account Management | `feat/fe-11-settings` |
 
 ### Agent A (FE-04)
 - API function tests -> implementation (`api/profile.ts`): createProfile, updateProfile, uploadPicture (FormData), deletePicture, tag CRUD, userData CRUD
@@ -164,15 +165,12 @@ After FE-03 completion, 3 independent tracks run concurrently.
 - Page tests -> implementation: `ProfileCreatePage` (first login), `EditProfilePage`
 - `useGeolocation` hook tests -> implementation: Geolocation API + manual input fallback
 
-### Agent B (FE-07 -> FE-11)
-- FE-07:
-  - API function tests -> implementation (`api/users.ts`): getUserProfile, like/unlike, block/unblock, getLists
-  - **[MOCK]** `unblockUser()`, `reportUser()` are mock implementations. Need connection when BE-08 (#25) implements `DELETE /users/{id}/block`, `POST /users/{id}/report`
-  - `ProfileCard` tests -> implementation (shared component: reused in FE-05, FE-06)
-  - `OnlineIndicator` tests -> implementation
-  - Page tests -> implementation: `UserProfilePage`, `LikesPage`, `ViewsPage`
-- FE-11:
-  - `SettingsPage` tests -> implementation (account deletion + block list management)
+### Agent B (FE-07)
+- API function tests -> implementation (`api/users.ts`): getUserProfile, like/unlike, block/unblock, getLists
+- **[MOCK]** `unblockUser()`, `reportUser()` are mock implementations. Need connection when BE-08 (#25) implements `DELETE /users/{id}/block`, `POST /users/{id}/report`
+- `ProfileCard` tests -> implementation (shared component: reused in FE-05, FE-06)
+- `OnlineIndicator` tests -> implementation
+- Page tests -> implementation: `UserProfilePage`, `LikesPage`, `ViewsPage`
 
 ### Agent C (FE-08)
 - `wsStore.ts` tests -> implementation: WebSocket connection management, auto-reconnect (exponential backoff)
@@ -180,6 +178,11 @@ After FE-03 completion, 3 independent tracks run concurrently.
 - Message routing tests -> implementation: event type -> store handler dispatch
 - `useWebSocket` hook tests -> implementation: auto connect/disconnect on auth state change
 - `chatStore.ts` / `notificationStore.ts` placeholders (interfaces only) + tests
+
+### Agent D (FE-11)
+- `SettingsPage` tests -> implementation: account deletion, password change, block list management
+- API function tests -> implementation: deleteAccount, changePassword, getBlockList, unblockUser
+- **[MOCK]** `unblockUser()` is mock implementation (same as FE-07). Needs BE-08 (#25)
 
 ---
 
@@ -217,6 +220,8 @@ Second parallel phase after Phase 3 completion.
 ## Phase 5: Search (FE-06) — 1 agent
 
 **Issue**: #12 | **Depends**: FE-05
+
+> **並列化見送り理由**: FE-06 は FE-05 の `ProfileList`, `FilterPanel`, `SortControls` を直接再利用する設計。これらを事前に共通コンポーネントとして切り出す方法もあるが、ブラウジング UI と密結合であり、先に FE-05 でコンポーネント設計を確定してから FE-06 で再利用する方が手戻りリスクが低い。FE-06 自体のスコープも小さいため、sequential でもボトルネックにならない。
 
 - Search form tests -> implementation: age/fame rating range sliders, location, multi-tag selection
 - `SearchPage` tests -> implementation: reuse FE-05 components (`ProfileList`, `SortControls`)

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AuthProvider } from '@/types';
-import { clearTokens, getAccessToken, setTokens } from '@/api/client';
+import { clearTokens, setTokens } from '@/api/client';
 
 interface AuthState {
   readonly userId: string | null;
@@ -30,18 +30,6 @@ const initialState: AuthState = {
   authMethod: null,
 };
 
-function decodeTokenPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(base64));
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
 export const useAuthStore = create<AuthStore>()((set) => ({
   ...initialState,
 
@@ -60,30 +48,10 @@ export const useAuthStore = create<AuthStore>()((set) => ({
     set({ ...initialState });
   },
 
+  // In-memory tokens do not survive page reload.
+  // initialize is kept for API compatibility but is a no-op.
   initialize: () => {
-    const token = getAccessToken();
-    if (!token) return;
-
-    const payload = decodeTokenPayload(token);
-    if (!payload) {
-      clearTokens();
-      return;
-    }
-
-    const exp = payload.exp as number | undefined;
-    if (exp && exp * 1000 < Date.now()) {
-      clearTokens();
-      return;
-    }
-
-    set({
-      userId: typeof payload.sub === 'string' ? payload.sub : null,
-      isAuthenticated: true,
-      isVerified: payload.is_verified === true,
-      authMethod:
-        typeof payload.auth_method === 'string'
-          ? (payload.auth_method as AuthProvider)
-          : null,
-    });
+    // No-op: tokens are in-memory only and lost on reload.
+    // User must re-login after page refresh.
   },
 }));

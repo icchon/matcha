@@ -7,7 +7,6 @@ import {
   setTokens,
   clearTokens,
 } from '@/api/client';
-import { STORAGE_KEYS } from '@/lib/constants';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -28,67 +27,69 @@ function noContentResponse(): Response {
   } as Response;
 }
 
-describe('Token management', () => {
+describe('Token management (in-memory)', () => {
   beforeEach(() => {
-    localStorage.clear();
+    clearTokens();
   });
 
-  it('setTokens stores both tokens in localStorage', () => {
+  it('setTokens stores both tokens in memory', () => {
     setTokens('access-123', 'refresh-456');
 
     expect(
-      localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
-      'Access token should be stored under STORAGE_KEYS.ACCESS_TOKEN. Check setTokens uses the correct key.',
+      getAccessToken(),
+      'Access token should be retrievable after setTokens. Check in-memory storage.',
     ).toBe('access-123');
     expect(
-      localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
-      'Refresh token should be stored under STORAGE_KEYS.REFRESH_TOKEN. Check setTokens uses the correct key.',
+      getRefreshToken(),
+      'Refresh token should be retrievable after setTokens. Check in-memory storage.',
     ).toBe('refresh-456');
   });
 
-  it('getAccessToken returns stored token', () => {
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'my-token');
-
+  it('getAccessToken returns null when no token set', () => {
     expect(
       getAccessToken(),
-      'getAccessToken should read from STORAGE_KEYS.ACCESS_TOKEN in localStorage.',
-    ).toBe('my-token');
-  });
-
-  it('getAccessToken returns null when no token stored', () => {
-    expect(
-      getAccessToken(),
-      'getAccessToken should return null when localStorage has no access token.',
+      'getAccessToken should return null when no token has been set.',
     ).toBeNull();
   });
 
-  it('getRefreshToken returns stored token', () => {
-    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-abc');
-
+  it('getRefreshToken returns null when no token set', () => {
     expect(
       getRefreshToken(),
-      'getRefreshToken should read from STORAGE_KEYS.REFRESH_TOKEN in localStorage.',
-    ).toBe('refresh-abc');
+      'getRefreshToken should return null when no token has been set.',
+    ).toBeNull();
   });
 
-  it('clearTokens removes both tokens from localStorage', () => {
+  it('clearTokens removes both tokens from memory', () => {
     setTokens('a', 'b');
     clearTokens();
 
     expect(
-      localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
-      'clearTokens should remove access token from localStorage.',
+      getAccessToken(),
+      'clearTokens should reset access token to null.',
     ).toBeNull();
     expect(
-      localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
-      'clearTokens should remove refresh token from localStorage.',
+      getRefreshToken(),
+      'clearTokens should reset refresh token to null.',
+    ).toBeNull();
+  });
+
+  it('does NOT use localStorage for token storage', () => {
+    setTokens('access', 'refresh');
+
+    expect(
+      localStorage.getItem('matcha_access_token'),
+      'Tokens must NOT be stored in localStorage (XSS risk). Use in-memory storage instead.',
+    ).toBeNull();
+    expect(
+      localStorage.getItem('matcha_refresh_token'),
+      'Tokens must NOT be stored in localStorage (XSS risk). Use in-memory storage instead.',
     ).toBeNull();
   });
 });
 
 describe('apiClient', () => {
   beforeEach(() => {
-    localStorage.clear();
+    clearTokens();
     mockFetch.mockReset();
   });
 
@@ -106,7 +107,7 @@ describe('apiClient', () => {
     expect(url, 'GET should prepend /api/v1 to the path.').toBe('/api/v1/test');
     expect(
       (options.headers as Record<string, string>)['Authorization'],
-      'Authorization header should be "Bearer <token>" when access token is stored.',
+      'Authorization header should be "Bearer <token>" when access token is set.',
     ).toBe('Bearer bearer-token');
   });
 
@@ -118,7 +119,7 @@ describe('apiClient', () => {
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(
       (options.headers as Record<string, string>)['Authorization'],
-      'Authorization header should be absent when no token is stored.',
+      'Authorization header should be absent when no token is set.',
     ).toBeUndefined();
   });
 
@@ -251,5 +252,43 @@ describe('apiClient', () => {
         'When response body is not valid JSON, error message should include the status code.',
       ).toContain('500');
     }
+  });
+
+  describe('401 interceptor', () => {
+    it('clears tokens on 401 response', async () => {
+      setTokens('access', 'refresh');
+      mockFetch.mockResolvedValue(jsonResponse({ error: 'Unauthorized' }, 401));
+
+      try {
+        await apiClient.get('/protected');
+      } catch {
+        // expected
+      }
+
+      expect(
+        getAccessToken(),
+        '401 interceptor should clear access token. User needs to re-login.',
+      ).toBeNull();
+      expect(
+        getRefreshToken(),
+        '401 interceptor should clear refresh token. User needs to re-login.',
+      ).toBeNull();
+    });
+
+    it('does not clear tokens on non-401 errors', async () => {
+      setTokens('access', 'refresh');
+      mockFetch.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
+
+      try {
+        await apiClient.get('/missing');
+      } catch {
+        // expected
+      }
+
+      expect(
+        getAccessToken(),
+        'Non-401 errors should NOT clear tokens. Only 401 triggers logout.',
+      ).toBe('access');
+    });
   });
 });
