@@ -91,6 +91,29 @@ describe('useGeolocation', () => {
     ).toBeNull();
   });
 
+  it('sets error when geolocation is not supported', () => {
+    Object.defineProperty(globalThis.navigator, 'geolocation', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useGeolocation());
+
+    act(() => {
+      result.current.requestLocation();
+    });
+
+    expect(
+      result.current.error,
+      'error should indicate geolocation is unsupported when navigator.geolocation is undefined.',
+    ).toBe('Geolocation is not supported by this browser');
+    expect(
+      result.current.isLoading,
+      'isLoading should remain false when geolocation is unsupported.',
+    ).toBe(false);
+  });
+
   it('setManualLocation sets coordinates directly', () => {
     const { result } = renderHook(() => useGeolocation());
 
