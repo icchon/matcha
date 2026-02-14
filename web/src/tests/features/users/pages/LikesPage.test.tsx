@@ -9,15 +9,15 @@ import type { Like, UserProfileDetail } from '@/types';
 vi.mock('@/api/users');
 
 const mockLikedByMe: readonly Like[] = [
-  { likerId: 'me', likedId: 'user-2', createdAt: '2024-01-01' },
+  { likerId: 'me', likedId: '00000000-0000-0000-0000-000000000002', createdAt: '2024-01-01' },
 ];
 
 const mockLikedMe: readonly Like[] = [
-  { likerId: 'user-3', likedId: 'me', createdAt: '2024-01-02' },
+  { likerId: '00000000-0000-0000-0000-000000000003', likedId: 'me', createdAt: '2024-01-02' },
 ];
 
 const mockProfile: UserProfileDetail = {
-  userId: 'user-2',
+  userId: '00000000-0000-0000-0000-000000000002',
   firstName: 'Bob',
   lastName: 'Jones',
   username: 'bob',
@@ -28,7 +28,7 @@ const mockProfile: UserProfileDetail = {
   biography: 'Hello',
   locationName: 'Paris',
   fameRating: 50,
-  pictures: [{ id: 1, userId: 'user-2', url: '/images/bob.jpg', isProfilePic: true, createdAt: '2024-01-01' }],
+  pictures: [{ id: 1, userId: '00000000-0000-0000-0000-000000000002', url: '/images/bob.jpg', isProfilePic: true, createdAt: '2024-01-01' }],
   tags: [],
   isOnline: false,
   lastConnection: '2024-01-15T10:00:00Z',
@@ -36,7 +36,7 @@ const mockProfile: UserProfileDetail = {
 
 const mockProfile2: UserProfileDetail = {
   ...mockProfile,
-  userId: 'user-3',
+  userId: '00000000-0000-0000-0000-000000000003',
   firstName: 'Carol',
 };
 
@@ -45,8 +45,8 @@ beforeEach(() => {
   vi.mocked(usersApi.getLikedUsers).mockResolvedValue(mockLikedByMe);
   vi.mocked(usersApi.getWhoLikedMe).mockResolvedValue(mockLikedMe);
   vi.mocked(usersApi.getUserProfile).mockImplementation(async (userId: string) => {
-    if (userId === 'user-2') return mockProfile;
-    if (userId === 'user-3') return mockProfile2;
+    if (userId === '00000000-0000-0000-0000-000000000002') return mockProfile;
+    if (userId === '00000000-0000-0000-0000-000000000003') return mockProfile2;
     throw new Error('Not found');
   });
 });

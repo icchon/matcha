@@ -9,7 +9,7 @@ import type { UserProfileDetail } from '@/types';
 vi.mock('@/api/users');
 
 const mockProfile: UserProfileDetail = {
-  userId: 'user-1',
+  userId: '00000000-0000-0000-0000-000000000001',
   firstName: 'Alice',
   lastName: 'Smith',
   username: 'alice',
@@ -21,8 +21,8 @@ const mockProfile: UserProfileDetail = {
   locationName: 'Tokyo',
   fameRating: 75,
   pictures: [
-    { id: 1, userId: 'user-1', url: '/images/alice.jpg', isProfilePic: true, createdAt: '2024-01-01' },
-    { id: 2, userId: 'user-1', url: '/images/alice2.jpg', isProfilePic: false, createdAt: '2024-01-02' },
+    { id: 1, userId: '00000000-0000-0000-0000-000000000001', url: '/images/alice.jpg', isProfilePic: true, createdAt: '2024-01-01' },
+    { id: 2, userId: '00000000-0000-0000-0000-000000000001', url: '/images/alice2.jpg', isProfilePic: false, createdAt: '2024-01-02' },
   ],
   tags: [
     { id: 1, name: 'art' },
@@ -33,7 +33,7 @@ const mockProfile: UserProfileDetail = {
   distance: 3.5,
 };
 
-function renderPage(userId = 'user-1') {
+function renderPage(userId = '00000000-0000-0000-0000-000000000001') {
   return render(
     <MemoryRouter initialEntries={[`/users/${userId}`]}>
       <Routes>
@@ -128,7 +128,7 @@ describe('UserProfilePage', () => {
     expect(
       usersApi.likeUser,
       'Should call likeUser API with the user ID.',
-    ).toHaveBeenCalledWith('user-1');
+    ).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001');
   });
 
   it('shows error message when profile fetch fails', async () => {

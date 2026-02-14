@@ -13,6 +13,7 @@ const UserProfilePage: FC = () => {
   const [profile, setProfile] = useState<UserProfileDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // TODO(FE-XX): Derive initial isLiked/isBlocked from API response or separate endpoint
   const [isLiked, setIsLiked] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);

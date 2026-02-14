@@ -6,7 +6,7 @@ import { ProfileCard } from '@/features/users/components/ProfileCard';
 import type { UserProfileDetail } from '@/types';
 
 const mockProfile: UserProfileDetail = {
-  userId: 'user-1',
+  userId: '00000000-0000-0000-0000-000000000001',
   firstName: 'Alice',
   lastName: 'Smith',
   username: 'alice',
@@ -18,7 +18,7 @@ const mockProfile: UserProfileDetail = {
   locationName: 'Tokyo',
   fameRating: 75,
   pictures: [
-    { id: 1, userId: 'user-1', url: '/images/alice.jpg', isProfilePic: true, createdAt: '2024-01-01' },
+    { id: 1, userId: '00000000-0000-0000-0000-000000000001', url: '/images/alice.jpg', isProfilePic: true, createdAt: '2024-01-01' },
   ],
   tags: [
     { id: 1, name: 'art' },
@@ -94,7 +94,7 @@ describe('ProfileCard', () => {
     expect(
       link.getAttribute('href'),
       'Should link to /users/:userId.',
-    ).toBe('/users/user-1');
+    ).toBe('/users/00000000-0000-0000-0000-000000000001');
   });
 
   it('calls onLike when like button is clicked', async () => {
@@ -108,7 +108,7 @@ describe('ProfileCard', () => {
     expect(
       onLike,
       'onLike callback should be called with userId when like button clicked.',
-    ).toHaveBeenCalledWith('user-1');
+    ).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001');
   });
 
   it('does not render like button when onLike is not provided', () => {
