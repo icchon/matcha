@@ -11,6 +11,9 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from '@/features/auth/pages';
+import { UserProfilePage } from '@/features/users/pages/UserProfilePage';
+import { LikesPage } from '@/features/users/pages/LikesPage';
+import { ViewsPage } from '@/features/users/pages/ViewsPage';
 
 // Placeholder page components - will be replaced in later phases
 function HomePage() {
@@ -33,20 +36,8 @@ function EditProfilePage() {
   return <div>EditProfilePage</div>;
 }
 
-function UserProfilePage() {
-  return <div>UserProfilePage</div>;
-}
-
 function ChatPage() {
   return <div>ChatPage</div>;
-}
-
-function LikesPage() {
-  return <div>LikesPage</div>;
-}
-
-function ViewsPage() {
-  return <div>ViewsPage</div>;
 }
 
 function NotificationsPage() {
