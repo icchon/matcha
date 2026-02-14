@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PhotoUploader } from '@/features/profile/components/PhotoUploader';
 import type { Picture } from '@/types';
@@ -114,6 +114,33 @@ describe('PhotoUploader', () => {
       screen.queryByTestId('photo-file-input'),
       'Upload input should be hidden when at max 5 pictures.',
     ).not.toBeInTheDocument();
+  });
+
+  it('rejects files with invalid MIME type', async () => {
+    render(
+      <PhotoUploader
+        pictures={[]}
+        onUpload={mockOnUpload}
+        onDelete={mockOnDelete}
+        isLoading={false}
+      />,
+    );
+
+    const file = new File(['data'], 'malicious.svg', { type: 'image/svg+xml' });
+    const input = screen.getByTestId('photo-file-input') as HTMLInputElement;
+    // Use fireEvent to bypass the accept attribute filter (simulates programmatic bypass)
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(
+      mockOnUpload,
+      'onUpload should NOT be called for disallowed file types (SVG can contain scripts).',
+    ).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(
+        screen.getByRole('alert'),
+        'Should show error message for invalid file type.',
+      ).toBeInTheDocument();
+    });
   });
 
   it('shows picture count', () => {
