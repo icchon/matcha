@@ -11,6 +11,8 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from '@/features/auth/pages';
+import { ProfileCreatePage } from '@/features/profile/pages/ProfileCreatePage';
+import { EditProfilePage } from '@/features/profile/pages/EditProfilePage';
 
 // Placeholder page components - will be replaced in later phases
 function HomePage() {
@@ -23,14 +25,6 @@ function BrowsePage() {
 
 function SearchPage() {
   return <div>SearchPage</div>;
-}
-
-function ProfileCreatePage() {
-  return <div>ProfileCreatePage</div>;
-}
-
-function EditProfilePage() {
-  return <div>EditProfilePage</div>;
 }
 
 function UserProfilePage() {
