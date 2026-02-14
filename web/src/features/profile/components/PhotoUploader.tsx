@@ -4,6 +4,18 @@ import { Button } from '@/components/ui/Button';
 import type { Picture } from '@/types';
 
 const MAX_PICTURES = 5;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+function validateImageFile(file: File): string | null {
+  if (!ALLOWED_TYPES.includes(file.type as typeof ALLOWED_TYPES[number])) {
+    return 'Only JPEG, PNG, WebP, and GIF images are allowed';
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return 'File must be smaller than 5 MB';
+  }
+  return null;
+}
 
 interface PhotoUploaderProps {
   readonly pictures: readonly Picture[];
@@ -14,20 +26,34 @@ interface PhotoUploaderProps {
 
 const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, isLoading }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canUpload = pictures.length < MAX_PICTURES;
+
+  const handleValidatedUpload = useCallback(
+    (file: File) => {
+      const error = validateImageFile(file);
+      if (error) {
+        setFileError(error);
+        return;
+      }
+      setFileError(null);
+      onUpload(file);
+    },
+    [onUpload],
+  );
 
   const handleFileChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        onUpload(file);
+        handleValidatedUpload(file);
       }
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     },
-    [onUpload],
+    [handleValidatedUpload],
   );
 
   const handleDrop = useCallback(
@@ -36,10 +62,10 @@ const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, i
       setIsDragging(false);
       const file = e.dataTransfer.files[0];
       if (file) {
-        onUpload(file);
+        handleValidatedUpload(file);
       }
     },
-    [onUpload],
+    [handleValidatedUpload],
   );
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -81,6 +107,10 @@ const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, i
         ))}
       </div>
 
+      {fileError ? (
+        <p role="alert" className="text-sm text-red-600">{fileError}</p>
+      ) : null}
+
       {canUpload ? (
         <div
           onDrop={handleDrop}
@@ -97,7 +127,7 @@ const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, i
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             data-testid="photo-file-input"
             className="hidden"
             onChange={handleFileChange}
