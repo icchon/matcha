@@ -1,120 +1,16 @@
-import { useEffect, useState, useCallback, type FC } from 'react';
+import type { FC } from 'react';
 import { useParams } from 'react-router-dom';
-import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { OnlineIndicator } from '@/features/users/components/OnlineIndicator';
 import { ActionButtons } from '@/features/users/components/ActionButtons';
-import * as usersApi from '@/api/users';
-import type { UserProfileDetail } from '@/types';
+import { useUserProfile } from '@/features/users/hooks/useUserProfile';
+import { useProfileActions } from '@/features/users/hooks/useProfileActions';
 
 const UserProfilePage: FC = () => {
   const { userId } = useParams<{ userId: string }>();
-  const [profile, setProfile] = useState<UserProfileDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  // TODO(FE-XX): Derive initial isLiked/isBlocked from API response or separate endpoint
-  const [isLiked, setIsLiked] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-
-    usersApi.getUserProfile(userId).then((data) => {
-      if (!cancelled) {
-        setProfile(data);
-        setIsLoading(false);
-      }
-    }).catch((err) => {
-      if (!cancelled) {
-        const message = err instanceof Error ? err.message : 'Failed to load profile';
-        setError(message);
-        setIsLoading(false);
-      }
-    });
-
-    return () => { cancelled = true; };
-  }, [userId]);
-
-  const handleLike = useCallback(async () => {
-    if (!userId) return;
-    setActionLoading(true);
-    try {
-      const result = await usersApi.likeUser(userId);
-      setIsLiked(true);
-      if (result.matched) {
-        toast.success("It's a match!");
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to like user';
-      toast.error(message);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [userId]);
-
-  const handleUnlike = useCallback(async () => {
-    if (!userId) return;
-    setActionLoading(true);
-    try {
-      await usersApi.unlikeUser(userId);
-      setIsLiked(false);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unlike user';
-      toast.error(message);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [userId]);
-
-  const handleBlock = useCallback(async () => {
-    if (!userId) return;
-    setActionLoading(true);
-    try {
-      await usersApi.blockUser(userId);
-      setIsBlocked(true);
-      toast.success('User blocked');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to block user';
-      toast.error(message);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [userId]);
-
-  const handleUnblock = useCallback(async () => {
-    if (!userId) return;
-    setActionLoading(true);
-    try {
-      await usersApi.unblockUser(userId);
-      setIsBlocked(false);
-      toast.success('User unblocked');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unblock user';
-      toast.error(message);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [userId]);
-
-  const handleReport = useCallback(async () => {
-    if (!userId) return;
-    setActionLoading(true);
-    try {
-      await usersApi.reportUser(userId, 'inappropriate');
-      toast.success('Report submitted');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to report user';
-      toast.error(message);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [userId]);
+  const { profile, isLoading, error } = useUserProfile(userId);
+  const actions = useProfileActions(userId);
 
   if (isLoading) {
     return (
@@ -190,14 +86,14 @@ const UserProfilePage: FC = () => {
 
       <ActionButtons
         userId={profile.userId}
-        isLiked={isLiked}
-        isBlocked={isBlocked}
-        isLoading={actionLoading}
-        onLike={handleLike}
-        onUnlike={handleUnlike}
-        onBlock={handleBlock}
-        onUnblock={handleUnblock}
-        onReport={handleReport}
+        isLiked={actions.isLiked}
+        isBlocked={actions.isBlocked}
+        isLoading={actions.actionLoading}
+        onLike={actions.handleLike}
+        onUnlike={actions.handleUnlike}
+        onBlock={actions.handleBlock}
+        onUnblock={actions.handleUnblock}
+        onReport={actions.handleReport}
       />
     </div>
   );
