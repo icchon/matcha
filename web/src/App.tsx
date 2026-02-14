@@ -4,28 +4,15 @@ import { Toaster } from 'sonner';
 import { Layout } from '@/components/layout';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { useAuthStore } from '@/stores/authStore';
+import {
+  LoginPage,
+  SignupPage,
+  VerifyEmailPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+} from '@/features/auth/pages';
 
 // Placeholder page components - will be replaced in later phases
-function LoginPage() {
-  return <div>LoginPage</div>;
-}
-
-function SignupPage() {
-  return <div>SignupPage</div>;
-}
-
-function VerifyEmailPage() {
-  return <div>VerifyEmailPage</div>;
-}
-
-function ForgotPasswordPage() {
-  return <div>ForgotPasswordPage</div>;
-}
-
-function ResetPasswordPage() {
-  return <div>ResetPasswordPage</div>;
-}
-
 function HomePage() {
   return <div>HomePage</div>;
 }

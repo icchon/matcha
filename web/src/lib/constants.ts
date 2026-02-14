@@ -1,8 +1,3 @@
-export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'matcha_access_token',
-  REFRESH_TOKEN: 'matcha_refresh_token',
-} as const;
-
 export const API_PATHS = {
   AUTH: {
     LOGIN: '/auth/login',
