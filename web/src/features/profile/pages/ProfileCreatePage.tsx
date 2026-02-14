@@ -1,5 +1,7 @@
 import { useEffect, type FC } from 'react';
 import { useProfileStore } from '@/stores/profileStore';
+import { usePictureStore } from '@/stores/pictureStore';
+import { useTagStore } from '@/stores/tagStore';
 import { ProfileForm } from '@/features/profile/components/ProfileForm';
 import { PhotoUploader } from '@/features/profile/components/PhotoUploader';
 import { TagManager } from '@/features/profile/components/TagManager';
@@ -7,17 +9,23 @@ import type { ProfileFormData } from '@/lib/validators';
 
 const ProfileCreatePage: FC = () => {
   const profile = useProfileStore((s) => s.profile);
-  const pictures = useProfileStore((s) => s.pictures);
-  const tags = useProfileStore((s) => s.tags);
-  const allTags = useProfileStore((s) => s.allTags);
-  const isLoading = useProfileStore((s) => s.isLoading);
-  const error = useProfileStore((s) => s.error);
+  const isProfileLoading = useProfileStore((s) => s.isLoading);
+  const profileError = useProfileStore((s) => s.error);
   const saveProfile = useProfileStore((s) => s.saveProfile);
-  const fetchTags = useProfileStore((s) => s.fetchTags);
-  const uploadPicture = useProfileStore((s) => s.uploadPicture);
-  const deletePicture = useProfileStore((s) => s.deletePicture);
-  const addTag = useProfileStore((s) => s.addTag);
-  const removeTag = useProfileStore((s) => s.removeTag);
+
+  const pictures = usePictureStore((s) => s.pictures);
+  const isPicturesLoading = usePictureStore((s) => s.isLoading);
+  const pictureError = usePictureStore((s) => s.error);
+  const uploadPicture = usePictureStore((s) => s.uploadPicture);
+  const deletePicture = usePictureStore((s) => s.deletePicture);
+
+  const tags = useTagStore((s) => s.tags);
+  const allTags = useTagStore((s) => s.allTags);
+  const isTagsLoading = useTagStore((s) => s.isLoading);
+  const tagError = useTagStore((s) => s.error);
+  const fetchTags = useTagStore((s) => s.fetchTags);
+  const addTag = useTagStore((s) => s.addTag);
+  const removeTag = useTagStore((s) => s.removeTag);
 
   useEffect(() => {
     fetchTags();
@@ -36,6 +44,8 @@ const ProfileCreatePage: FC = () => {
     });
   };
 
+  const error = profileError ?? pictureError ?? tagError;
+
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Create Profile</h1>
@@ -48,7 +58,7 @@ const ProfileCreatePage: FC = () => {
 
       <ProfileForm
         onSubmit={handleSubmit}
-        isLoading={isLoading}
+        isLoading={isProfileLoading}
         initialValues={profile ?? undefined}
       />
 
@@ -56,7 +66,7 @@ const ProfileCreatePage: FC = () => {
         pictures={[...pictures]}
         onUpload={uploadPicture}
         onDelete={deletePicture}
-        isLoading={isLoading}
+        isLoading={isPicturesLoading}
       />
 
       <TagManager
@@ -64,7 +74,7 @@ const ProfileCreatePage: FC = () => {
         allTags={[...allTags]}
         onAdd={addTag}
         onRemove={removeTag}
-        isLoading={isLoading}
+        isLoading={isTagsLoading}
       />
     </div>
   );
