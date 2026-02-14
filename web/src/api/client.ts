@@ -33,15 +33,17 @@ export function clearTokens(): void {
   localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
-function buildHeaders(): HeadersInit {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+function buildHeaders(): Record<string, string> {
   const token = getAccessToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+function buildAuthHeader(): Record<string, string> {
+  const token = getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -82,6 +84,15 @@ export const apiClient = {
       method: 'PUT',
       headers: buildHeaders(),
       body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    return handleResponse<T>(response);
+  },
+
+  async upload<T>(path: string, formData: FormData): Promise<T> {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: buildAuthHeader(),
+      body: formData,
     });
     return handleResponse<T>(response);
   },

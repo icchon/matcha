@@ -203,6 +203,35 @@ describe('apiClient', () => {
     }
   });
 
+  it('upload sends FormData without Content-Type header', async () => {
+    setTokens('bearer-token', 'refresh');
+    mockFetch.mockResolvedValue(jsonResponse({ url: '/images/pic.jpg' }, 201));
+
+    const formData = new FormData();
+    formData.append('file', new Blob(['data']), 'photo.jpg');
+
+    const result = await apiClient.upload<{ url: string }>('/me/profile/pictures', formData);
+
+    const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url, 'upload should prepend /api/v1 to the path.').toBe(
+      '/api/v1/me/profile/pictures',
+    );
+    expect(options.method, 'upload should use POST method.').toBe('POST');
+    expect(
+      options.body,
+      'upload should send FormData as body directly (not JSON-serialized).',
+    ).toBe(formData);
+    expect(
+      (options.headers as Record<string, string>)['Content-Type'],
+      'upload should NOT set Content-Type header so browser sets multipart/form-data boundary automatically.',
+    ).toBeUndefined();
+    expect(
+      (options.headers as Record<string, string>)['Authorization'],
+      'upload should include Authorization header when token exists.',
+    ).toBe('Bearer bearer-token');
+    expect(result.url).toBe('/images/pic.jpg');
+  });
+
   it('handles non-JSON error response gracefully', async () => {
     mockFetch.mockResolvedValue({
       ok: false,

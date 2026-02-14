@@ -34,7 +34,8 @@ function decodeTokenPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
     return payload;
   } catch {
     return null;
@@ -76,10 +77,13 @@ export const useAuthStore = create<AuthStore>()((set) => ({
     }
 
     set({
-      userId: (payload.sub as string) ?? null,
+      userId: typeof payload.sub === 'string' ? payload.sub : null,
       isAuthenticated: true,
-      isVerified: (payload.is_verified as boolean) ?? false,
-      authMethod: (payload.auth_method as AuthProvider) ?? null,
+      isVerified: payload.is_verified === true,
+      authMethod:
+        typeof payload.auth_method === 'string'
+          ? (payload.auth_method as AuthProvider)
+          : null,
     });
   },
 }));
