@@ -19,7 +19,7 @@ Backend (Go) has basic features implemented. Frontend (React + Vite + TS) scaffo
 | Phase | Issue | Status | PR | Tests |
 |-------|-------|--------|-----|-------|
 | 1 | FE-02 (#8) | **Complete** | #33 | 104 |
-| 2 | FE-03 (#9) | Pending | — | — |
+| 2 | FE-03 (#9) | **Complete** | #34 | 169 |
 | 3 | FE-04 (#10), FE-07 (#13), FE-08 (#14), FE-11 (#17) — 4 agents parallel | Pending | — | — |
 | 4 | FE-05 (#11), FE-09 (#15), FE-10 (#16) | Pending | — | — |
 | 5 | FE-06 (#12) | Pending | — | — |
@@ -35,7 +35,7 @@ FE-01 ✅
 FE-02 (#8) ✅ Layout / UI Foundation
   |
   v
-FE-03 (#9) Authentication
+FE-03 (#9) ✅ Authentication
   |
   +------------------------------+------------------+
   v                              v                  v
@@ -80,12 +80,22 @@ Phase 1 の security-reviewer で検出された HIGH 項目。Phase 2 以降で
 
 | ID | Issue | Resolution |
 |----|-------|-----------|
-| H-1 | localStorage にトークン保存 (XSS リスク) | FE-03 でインメモリ保存 (Zustand store + closure) に移行。BE 変更不要。トレードオフ: ページリロード時に再ログインが必要 |
-| H-2 | トークンリフレッシュ機構なし | FE-03 で 401 インターセプタ + リフレッシュ実装 |
+| H-1 | localStorage にトークン保存 (XSS リスク) | **対応済み (FE-03)**: accessToken はインメモリ保存 (モジュール変数 + closure) に移行。refreshToken も現状インメモリだが、BE-08 (#25) のリフレッシュ API 実装後に httpOnly cookie 方式へ移行予定 |
+| H-2 | トークンリフレッシュ機構なし | **部分対応 (FE-03)**: 401 インターセプタ実装済み。リフレッシュ API (BE-08 #25) 実装後に自動リフレッシュを接続予定 |
 
-### 5. apiClient 構造改善 (Phase 2 で対応)
+### 5. apiClient 構造改善 — RESOLVED in Phase 2
 
-Phase 1 レビューで `apiClient` の各メソッド (`get`/`post`/`put`/`delete`) の fetch パターン重複が指摘された。FE-03 でトークンリフレッシュの 401 インターセプタを追加するタイミングで、共通 `request()` ベースメソッドへのリファクタリングを行う。
+Phase 1 レビューで指摘された `apiClient` の fetch パターン重複を FE-03 で解消済み。共通 `request()` ベースメソッド + 401 インターセプタを実装。
+
+### 6. refreshToken 永続化 (BE-08 #25 と連携)
+
+PR #34 レビューで @icchon から指摘。現状は accessToken / refreshToken 両方メモリ保存だが、refreshToken は永続化が必要。
+
+- **方針**: httpOnly cookie（`Set-Cookie: httpOnly; Secure; SameSite=Strict`）で BE 側から設定
+- **理由**: localStorage は XSS リスクがあり、H-1 の設計意図と矛盾する
+- **依存**: BE-08 (#25) の `POST /api/v1/auth/refresh` エンドポイント実装が先行
+- **FE 対応**: `authStore.initialize()` でリフレッシュ API を呼びセッション復帰、401 interceptor で自動リフレッシュ
+- **詳細**: BE-08 (#25) コメント参照
 
 ---
 
@@ -132,18 +142,33 @@ Phase 1 レビューで `apiClient` の各メソッド (`get`/`post`/`put`/`dele
 
 ---
 
-## Phase 2: Authentication (FE-03) — 1 agent
+## Phase 2: Authentication (FE-03) — COMPLETE
 
-**Issue**: #9 | **Depends**: FE-02 ✅ | **Blocks**: FE-04, FE-07, FE-08, FE-11
+**Issue**: #9 | **PR**: #34 | **Branch**: `feat/fe-03-auth` | **Tests**: 169
 
-### Tasks
+### Deliverables
 
-1. `apiClient` リファクタリング: 共通 `request()` メソッド + 401 インターセプタ (H-2 対応)
-2. Zod validation schemas (`lib/validators.ts`) + tests (valid/invalid cases)
-3. API functions (`api/auth.ts`) + tests (apiClient mock)
-4. Auth hook (`features/auth/hooks/useAuth.ts`) + tests
-5. Auth components + tests: `LoginForm`, `SignupForm`, `OAuthButtons`
-6. Auth pages + tests: `LoginPage`, `SignupPage`, `VerifyEmailPage`, `ForgotPasswordPage`, `ResetPasswordPage`
+| Category | Files |
+|----------|-------|
+| apiClient refactor | `client.ts` — 共通 `request()` メソッド, 401 インターセプタ, インメモリトークン管理 |
+| Validators | `lib/validators.ts` — Zod schemas (email, password, signup, login, forgot/reset password) |
+| API functions | `api/auth.ts` — login, signup, logout, verifyEmail, forgotPassword, resetPassword |
+| Auth hook | `features/auth/hooks/useAuth.ts` — useAuth (login/signup/logout/verify/password reset) |
+| Auth components | `LoginForm`, `SignupForm`, `OAuthButtons` |
+| Auth pages | `LoginPage`, `SignupPage`, `VerifyEmailPage`, `ForgotPasswordPage`, `ResetPasswordPage` |
+| Types | `types/raw.ts` — API response types |
+
+### Review Results
+
+| Reviewer | Result |
+|----------|--------|
+| @FRISKSYA | サインアップ→ログイン→ログアウトの動作確認済み |
+| @icchon | 承認。refreshToken 永続化は次 PR で対応 (Known Issues #6 参照) |
+
+### Remaining Work (tracked separately)
+
+- refreshToken の httpOnly cookie 永続化 → Known Issues #6 / BE-08 (#25)
+- Google / GitHub OAuth → 後続対応前提の stub 実装
 
 ---
 
@@ -252,3 +277,4 @@ Second parallel phase after Phase 3 completion.
 | `api/users.ts: reportUser()` | Success response stub | BE-08 (#25) | After BE impl |
 | `api/notifications.ts: markAsRead()` | Success response stub | BE-08 (#25) | After BE impl |
 | `wsStore.ts: connect()` | MockWebSocket for tests | BE-03 (#20) + nginx | After nginx config |
+| `client.ts: refreshToken` | インメモリ保存 (httpOnly cookie 未実装) | BE-08 (#25) | リフレッシュ API + Set-Cookie 実装後 |
