@@ -43,6 +43,11 @@ function clearReconnectTimer(): void {
   }
 }
 
+// Browser WebSocket API does not support custom headers.
+// Token is passed as a query param. Server-side (nginx) must:
+// 1. Strip token param from access logs to prevent credential leakage
+// 2. Convert query param to Authorization header before forwarding to WS gateway
+// Future: use short-lived WS tickets instead of the access token itself
 function buildWsUrl(baseUrl: string): string {
   const token = getAccessToken();
   if (!token) return baseUrl;
@@ -54,6 +59,7 @@ function buildWsUrl(baseUrl: string): string {
 function handleMessage(event: MessageEvent): void {
   try {
     const message = JSON.parse(event.data as string) as WsMessage;
+    if (typeof message.type !== 'string') return;
     const handler = handlers.get(message.type);
     if (handler) {
       handler(message.payload);
@@ -128,6 +134,8 @@ export const useWsStore = create<WsStore>()((set) => ({
     intentionalDisconnect = true;
     clearReconnectTimer();
     currentBackoff = INITIAL_BACKOFF_MS;
+    currentUrl = null;
+    handlers.clear();
 
     if (ws) {
       ws.close();

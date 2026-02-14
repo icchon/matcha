@@ -430,5 +430,25 @@ describe('wsStore', () => {
         ws.onmessage?.({ data: 'not-json' } as MessageEvent);
       }).not.toThrow();
     });
+
+    it('disconnect clears all registered handlers', () => {
+      const handler = vi.fn();
+      useWsStore.getState().registerHandler('chat_message', handler);
+
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+
+      useWsStore.getState().disconnect();
+
+      // Re-connect and send message — handler should NOT fire
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+      latestMock().simulateMessage({ type: 'chat_message', payload: {} });
+
+      expect(
+        handler,
+        'After disconnect(), all handlers should be cleared. Check that disconnect calls handlers.clear().',
+      ).not.toHaveBeenCalled();
+    });
   });
 });
