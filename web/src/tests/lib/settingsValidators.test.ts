@@ -47,6 +47,28 @@ describe('changePasswordSchema', () => {
     ).toBe(false);
   });
 
+  it('rejects when newPassword is same as currentPassword', () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: 'samepass123',
+      newPassword: 'samepass123',
+      confirmPassword: 'samepass123',
+    });
+
+    expect(
+      result.success,
+      'New password must differ from current password. Check refine().',
+    ).toBe(false);
+    if (!result.success) {
+      const newPwError = result.error.issues.find(
+        (i) => i.path.includes('newPassword'),
+      );
+      expect(
+        newPwError?.message,
+        'Error should say new password must be different.',
+      ).toBe('New password must be different from current password');
+    }
+  });
+
   it('rejects when confirmPassword does not match newPassword', () => {
     const result = changePasswordSchema.safeParse({
       currentPassword: 'oldpass123',

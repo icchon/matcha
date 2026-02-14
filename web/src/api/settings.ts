@@ -11,6 +11,7 @@ export async function deleteAccount(): Promise<void> {
   await apiClient.delete(API_PATHS.USERS.DELETE_ME);
 }
 
+// Reuses PASSWORD_RESET endpoint — backend differentiates by presence of currentPassword vs token
 export async function changePassword(
   params: ChangePasswordRequest,
 ): Promise<MessageResponse> {
