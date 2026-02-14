@@ -1,4 +1,4 @@
-export type { Gender, SexualPreference, AuthProvider, User, UserProfile, UserData, Tag, UserTag, Picture } from './user.ts';
+export type { Gender, SexualPreference, AuthProvider, User, UserProfile, UserProfileDetail, UserData, Tag, UserTag, Picture } from './user.ts';
 export type { Message, ChatPartner } from './chat.ts';
 export type { NotificationType, Notification } from './notification.ts';
 export type {
