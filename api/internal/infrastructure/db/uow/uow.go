@@ -2,6 +2,8 @@ package uow
 
 import (
 	"context"
+	"log"
+
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/infrastructure/db/postgres"
 	"github.com/jmoiron/sqlx"
@@ -40,7 +42,10 @@ func (u *unitOfWork) Do(ctx context.Context, fn func(m repo.RepositoryManager) e
 		postgres.NewUserDataRepository(tx),
 	)
 	if err = fn(manager); err != nil {
-		return tx.Rollback()
+		if rbErr := tx.Rollback(); rbErr != nil {
+			log.Printf("CRITICAL: rollback failed: %v (original: %v)", rbErr, err)
+		}
+		return err
 	}
 	return tx.Commit()
 }

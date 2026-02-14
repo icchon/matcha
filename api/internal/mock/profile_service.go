@@ -233,3 +233,18 @@ func (mr *MockProfileServiceMockRecorder) ViewProfile(ctx, viewerID, viewedID an
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ViewProfile", reflect.TypeOf((*MockProfileService)(nil).ViewProfile), ctx, viewerID, viewedID)
 }
+
+// RecommendProfiles mocks base method.
+func (m *MockProfileService) RecommendProfiles(ctx context.Context, selfUserID uuid.UUID) ([]*entity.UserProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecommendProfiles", ctx, selfUserID)
+	ret0, _ := ret[0].([]*entity.UserProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecommendProfiles indicates an expected call of RecommendProfiles.
+func (mr *MockProfileServiceMockRecorder) RecommendProfiles(ctx, selfUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendProfiles", reflect.TypeOf((*MockProfileService)(nil).RecommendProfiles), ctx, selfUserID)
+}

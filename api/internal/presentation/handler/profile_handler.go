@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"log" // Add this import
-	"net/http"
-
 	"database/sql"
 	"encoding/json"
+	"io"
+	"log"
+	"net/http"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/apperrors"
@@ -161,6 +161,47 @@ func (h *ProfileHandler) UpdateProfileHandler(w http.ResponseWriter, r *http.Req
 
 // /profile/pictures POST
 func (h *ProfileHandler) UploadProfilePictureHandler(w http.ResponseWriter, r *http.Request) {
+	const maxUploadSize = 5 << 20 // 5 MB
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+
+	file, _, err := r.FormFile("image")
+	if err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+	defer file.Close()
+
+	image, err := io.ReadAll(file)
+	if err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	contentType := http.DetectContentType(image)
+	allowedTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/gif":  true,
+		"image/webp": true,
+	}
+	if !allowedTypes[contentType] {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	picture, err := h.profileSvc.UploadPicture(r.Context(), userID, image)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, picture)
 }
 
 // /profile/pictures/{pictureID} DELETE
