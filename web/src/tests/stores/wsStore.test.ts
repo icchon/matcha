@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { clearAllHandlers } from '@/features/websocket/messageRouter';
 import { useWsStore } from '@/stores/wsStore';
 import type { WsMessage } from '@/stores/wsStore';
 
@@ -32,7 +33,6 @@ class MockWebSocket {
 
   send = vi.fn();
 
-  // Helpers for test simulation
   simulateOpen(): void {
     this.readyState = MockWebSocket.OPEN;
     this.onopen?.({} as Event);
@@ -51,7 +51,6 @@ class MockWebSocket {
     this.onclose?.({ code, reason: '', wasClean } as CloseEvent);
   }
 
-  // Stubs for EventTarget interface (unused but required by type)
   addEventListener = vi.fn();
   removeEventListener = vi.fn();
   dispatchEvent = vi.fn(() => true);
@@ -70,7 +69,6 @@ function latestMock(): MockWebSocket {
   return instance;
 }
 
-// Replace global WebSocket
 const OriginalWebSocket = globalThis.WebSocket;
 
 beforeEach(() => {
@@ -85,6 +83,7 @@ afterEach(() => {
 describe('wsStore', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    clearAllHandlers();
     useWsStore.getState().disconnect();
     useWsStore.setState({
       connectionStatus: 'disconnected',
@@ -117,7 +116,6 @@ describe('wsStore', () => {
     });
 
     it('creates WebSocket with token as query param', () => {
-      // Mock getAccessToken
       vi.doMock('@/api/client', async (importOriginal) => {
         const actual = await importOriginal<typeof import('@/api/client')>();
         return { ...actual, getAccessToken: () => 'test-token-123' };
@@ -178,6 +176,29 @@ describe('wsStore', () => {
     it('is safe to call when not connected', () => {
       expect(() => useWsStore.getState().disconnect()).not.toThrow();
     });
+
+    it('does NOT clear handlers (handlers persist across reconnections)', () => {
+      const handler = vi.fn();
+      useWsStore.getState().registerHandler('chat.message', handler);
+
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+
+      useWsStore.getState().disconnect();
+
+      // Re-connect and send message — handler SHOULD still fire
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+      latestMock().simulateMessage({ type: 'chat.message', payload: { text: 'hello' } });
+
+      expect(
+        handler,
+        'Handlers should persist after disconnect(). Only clearAllHandlers() removes them.',
+      ).toHaveBeenCalledWith({ text: 'hello' });
+
+      // Cleanup
+      clearAllHandlers();
+    });
   });
 
   // --- Auto-reconnect ---
@@ -192,7 +213,6 @@ describe('wsStore', () => {
         'Should be connected before testing reconnect.',
       ).toBe('connected');
 
-      // Simulate unclean close (server disconnect)
       latestMock().simulateClose(1006, false);
 
       expect(
@@ -200,14 +220,12 @@ describe('wsStore', () => {
         'After unclean close, status should be "reconnecting". Check onclose handler.',
       ).toBe('reconnecting');
 
-      // First reconnect at 1s
       vi.advanceTimersByTime(1000);
       expect(
         mockInstances.length,
         'After 1s, should attempt first reconnect (2 total WS instances). Check backoff logic.',
       ).toBe(2);
 
-      // Simulate failure and next reconnect at 2s
       latestMock().simulateClose(1006, false);
       vi.advanceTimersByTime(2000);
       expect(
@@ -215,7 +233,6 @@ describe('wsStore', () => {
         'After 2s backoff, should attempt second reconnect (3 total). Check exponential backoff.',
       ).toBe(3);
 
-      // Simulate failure and next reconnect at 4s
       latestMock().simulateClose(1006, false);
       vi.advanceTimersByTime(4000);
       expect(
@@ -229,15 +246,12 @@ describe('wsStore', () => {
       latestMock().simulateOpen();
       latestMock().simulateClose(1006, false);
 
-      // Simulate many reconnect failures to exceed 30s cap
-      // delays: 1, 2, 4, 8, 16, 30, 30...
       for (let i = 0; i < 6; i++) {
         vi.advanceTimersByTime(30000);
         latestMock().simulateClose(1006, false);
       }
 
       const instancesBefore = mockInstances.length;
-      // At this point, backoff should be capped at 30s
       vi.advanceTimersByTime(29999);
       expect(
         mockInstances.length,
@@ -274,7 +288,6 @@ describe('wsStore', () => {
       latestMock().simulateOpen();
       latestMock().simulateClose(1006, false);
 
-      // Wait for first reconnect (1s)
       vi.advanceTimersByTime(1000);
       latestMock().simulateOpen();
 
@@ -283,7 +296,6 @@ describe('wsStore', () => {
         'After successful reconnect, status should be "connected".',
       ).toBe('connected');
 
-      // Disconnect again - backoff should reset to 1s
       latestMock().simulateClose(1006, false);
       const instancesBefore = mockInstances.length;
 
@@ -330,7 +342,7 @@ describe('wsStore', () => {
       const ws = latestMock();
       ws.simulateOpen();
 
-      const message: WsMessage = { type: 'chat_message', payload: { text: 'hello' } };
+      const message: WsMessage = { type: 'chat.message', payload: { id: '1', senderId: 'a', receiverId: 'b', content: 'hello', timestamp: '' } };
       useWsStore.getState().send(message);
 
       expect(
@@ -342,9 +354,8 @@ describe('wsStore', () => {
     it('does not send when not connected', () => {
       useWsStore.getState().connect('ws://test.example/ws');
       const ws = latestMock();
-      // Not calling simulateOpen - still connecting
 
-      const message: WsMessage = { type: 'chat_message', payload: {} };
+      const message: WsMessage = { type: 'chat.message', payload: { id: '1', senderId: 'a', receiverId: 'b', content: '', timestamp: '' } };
       useWsStore.getState().send(message);
 
       expect(
@@ -359,25 +370,47 @@ describe('wsStore', () => {
   describe('message routing', () => {
     it('routes incoming messages to registered handlers by type', () => {
       const chatHandler = vi.fn();
-      useWsStore.getState().registerHandler('chat_message', chatHandler);
+      useWsStore.getState().registerHandler('chat.message', chatHandler);
 
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      const message: WsMessage = { type: 'chat_message', payload: { text: 'hello' } };
+      const message = { type: 'chat.message', payload: { text: 'hello' } };
       latestMock().simulateMessage(message);
 
       expect(
         chatHandler,
-        'Registered handler for "chat_message" should be called with payload. Check message routing in onmessage.',
+        'Registered handler for "chat.message" should be called with payload. Check message routing in onmessage.',
       ).toHaveBeenCalledWith(message.payload);
+    });
+
+    it('supports multiple handlers for the SAME message type', () => {
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
+
+      useWsStore.getState().registerHandler('chat.message', handler1);
+      useWsStore.getState().registerHandler('chat.message', handler2);
+
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+
+      latestMock().simulateMessage({ type: 'chat.message', payload: { text: 'hi' } });
+
+      expect(
+        handler1,
+        'First handler for "chat.message" should be called. Multiple handlers per type must be supported.',
+      ).toHaveBeenCalledWith({ text: 'hi' });
+      expect(
+        handler2,
+        'Second handler for "chat.message" should also be called. Handlers must not overwrite each other.',
+      ).toHaveBeenCalledWith({ text: 'hi' });
     });
 
     it('supports multiple handlers for different message types', () => {
       const chatHandler = vi.fn();
       const notifHandler = vi.fn();
 
-      useWsStore.getState().registerHandler('chat_message', chatHandler);
+      useWsStore.getState().registerHandler('chat.message', chatHandler);
       useWsStore.getState().registerHandler('notification', notifHandler);
 
       useWsStore.getState().connect('ws://test.example/ws');
@@ -387,7 +420,7 @@ describe('wsStore', () => {
 
       expect(
         chatHandler,
-        'chat_message handler should NOT be called for a "notification" message.',
+        'chat.message handler should NOT be called for a "notification" message.',
       ).not.toHaveBeenCalled();
       expect(
         notifHandler,
@@ -395,20 +428,26 @@ describe('wsStore', () => {
       ).toHaveBeenCalledWith({ id: 1 });
     });
 
-    it('unregisterHandler removes the handler', () => {
-      const handler = vi.fn();
-      useWsStore.getState().registerHandler('chat_message', handler);
-      useWsStore.getState().unregisterHandler('chat_message');
+    it('unregisterHandler removes only the specified handler', () => {
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
+      useWsStore.getState().registerHandler('chat.message', handler1);
+      useWsStore.getState().registerHandler('chat.message', handler2);
+      useWsStore.getState().unregisterHandler('chat.message', handler1);
 
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      latestMock().simulateMessage({ type: 'chat_message', payload: {} });
+      latestMock().simulateMessage({ type: 'chat.message', payload: {} });
 
       expect(
-        handler,
-        'After unregisterHandler, handler should not be called.',
+        handler1,
+        'After unregisterHandler(handler1), handler1 should not be called.',
       ).not.toHaveBeenCalled();
+      expect(
+        handler2,
+        'handler2 should still be called after only handler1 was unregistered.',
+      ).toHaveBeenCalled();
     });
 
     it('ignores messages with unknown types gracefully', () => {
@@ -424,30 +463,25 @@ describe('wsStore', () => {
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      // Send raw non-JSON string
       const ws = latestMock();
       expect(() => {
         ws.onmessage?.({ data: 'not-json' } as MessageEvent);
       }).not.toThrow();
     });
 
-    it('disconnect clears all registered handlers', () => {
+    it('clearAllHandlers removes all handlers', () => {
       const handler = vi.fn();
-      useWsStore.getState().registerHandler('chat_message', handler);
+      useWsStore.getState().registerHandler('chat.message', handler);
+
+      useWsStore.getState().clearAllHandlers();
 
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
-
-      useWsStore.getState().disconnect();
-
-      // Re-connect and send message — handler should NOT fire
-      useWsStore.getState().connect('ws://test.example/ws');
-      latestMock().simulateOpen();
-      latestMock().simulateMessage({ type: 'chat_message', payload: {} });
+      latestMock().simulateMessage({ type: 'chat.message', payload: {} });
 
       expect(
         handler,
-        'After disconnect(), all handlers should be cleared. Check that disconnect calls handlers.clear().',
+        'After clearAllHandlers(), no handlers should be called.',
       ).not.toHaveBeenCalled();
     });
   });

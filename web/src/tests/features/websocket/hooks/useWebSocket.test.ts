@@ -21,6 +21,7 @@ vi.mock('@/stores/wsStore', async (importOriginal) => {
         send: vi.fn(),
         registerHandler: vi.fn(),
         unregisterHandler: vi.fn(),
+        clearAllHandlers: vi.fn(),
       };
       return selector ? selector(state) : state;
     }),
