@@ -4,7 +4,7 @@ import {
   deleteAccountSchema,
   type ChangePasswordFormData,
   type DeleteAccountFormData,
-} from '@/lib/settingsValidators';
+} from '@/features/settings/validators';
 
 describe('changePasswordSchema', () => {
   it('accepts valid input with matching passwords', () => {

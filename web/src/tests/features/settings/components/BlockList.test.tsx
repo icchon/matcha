@@ -16,7 +16,7 @@ let mockBlocks: Block[] = [];
 let mockIsLoading = false;
 let mockError: string | null = null;
 
-vi.mock('@/features/settings/hooks/useSettings', () => ({
+vi.mock('@/features/settings/hooks/useBlockList', () => ({
   useBlockList: () => ({
     blocks: mockBlocks,
     isLoading: mockIsLoading,

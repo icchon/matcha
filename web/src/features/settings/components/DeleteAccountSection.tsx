@@ -1,8 +1,8 @@
 import { useState, type FC } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { deleteAccountSchema, type DeleteAccountFormData } from '@/lib/settingsValidators';
-import { useDeleteAccount } from '@/features/settings/hooks/useSettings';
+import { deleteAccountSchema, type DeleteAccountFormData } from '@/features/settings/validators';
+import { useDeleteAccount } from '@/features/settings/hooks/useDeleteAccount';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';

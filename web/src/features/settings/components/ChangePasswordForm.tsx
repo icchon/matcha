@@ -1,8 +1,8 @@
 import type { FC } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { changePasswordSchema, type ChangePasswordFormData } from '@/lib/settingsValidators';
-import { useChangePassword } from '@/features/settings/hooks/useSettings';
+import { changePasswordSchema, type ChangePasswordFormData } from '@/features/settings/validators';
+import { useChangePassword } from '@/features/settings/hooks/useChangePassword';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
