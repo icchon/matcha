@@ -27,7 +27,9 @@ const DeleteAccountSection: FC = () => {
 
   const onSubmit = async () => {
     await deleteAccount();
-    closeModal();
+    // Navigation to /login happens inside the hook — no need to close modal
+    // as the component will unmount. Calling closeModal() here would trigger
+    // a React state update on an unmounted component.
   };
 
   return (
