@@ -5,7 +5,7 @@ import { DeleteAccountSection } from '@/features/settings/components/DeleteAccou
 
 const mockDeleteAccount = vi.fn();
 
-vi.mock('@/features/settings/hooks/useSettings', () => ({
+vi.mock('@/features/settings/hooks/useDeleteAccount', () => ({
   useDeleteAccount: () => ({
     isLoading: false,
     error: null,

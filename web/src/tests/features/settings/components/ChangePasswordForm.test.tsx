@@ -5,7 +5,7 @@ import { ChangePasswordForm } from '@/features/settings/components/ChangePasswor
 
 const mockChangePassword = vi.fn();
 
-vi.mock('@/features/settings/hooks/useSettings', () => ({
+vi.mock('@/features/settings/hooks/useChangePassword', () => ({
   useChangePassword: () => ({
     isLoading: false,
     error: null,

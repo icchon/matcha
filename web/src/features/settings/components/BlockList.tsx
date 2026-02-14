@@ -1,5 +1,5 @@
 import { useEffect, type FC } from 'react';
-import { useBlockList } from '@/features/settings/hooks/useSettings';
+import { useBlockList } from '@/features/settings/hooks/useBlockList';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 
