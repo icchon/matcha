@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChangePassword, useDeleteAccount, useBlockList } from '@/features/settings/hooks/useSettings';
 import * as settingsApi from '@/api/settings';
+import { clearTokens } from '@/api/client';
 import type { Block, MessageResponse } from '@/types';
 
 vi.mock('@/api/settings');
+vi.mock('@/api/client', () => ({
+  clearTokens: vi.fn(),
+}));
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
@@ -23,14 +27,15 @@ beforeEach(() => {
 });
 
 describe('useChangePassword', () => {
-  it('calls changePassword API and shows success toast', async () => {
+  it('calls changePassword API, shows success toast, and returns true', async () => {
     const response: MessageResponse = { message: 'Password changed' };
     vi.mocked(settingsApi.changePassword).mockResolvedValue(response);
 
     const { result } = renderHook(() => useChangePassword());
 
+    let success: boolean = false;
     await act(async () => {
-      await result.current.changePassword({
+      success = await result.current.changePassword({
         currentPassword: 'oldpass123',
         newPassword: 'newpass123',
       });
@@ -46,15 +51,20 @@ describe('useChangePassword', () => {
     expect(toast.success).toHaveBeenCalledWith('Password changed successfully!');
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
+    expect(
+      success,
+      'changePassword should return true on success for conditional form reset.',
+    ).toBe(true);
   });
 
-  it('sets error on changePassword failure', async () => {
+  it('sets error on changePassword failure and returns false', async () => {
     vi.mocked(settingsApi.changePassword).mockRejectedValue(new Error('Wrong password'));
 
     const { result } = renderHook(() => useChangePassword());
 
+    let success: boolean = true;
     await act(async () => {
-      await result.current.changePassword({
+      success = await result.current.changePassword({
         currentPassword: 'wrong',
         newPassword: 'newpass123',
       });
@@ -65,6 +75,10 @@ describe('useChangePassword', () => {
       'Error should be set when changePassword fails. Check error extraction.',
     ).toBe('Wrong password');
     expect(toast.error).toHaveBeenCalled();
+    expect(
+      success,
+      'changePassword should return false on failure so form is not reset.',
+    ).toBe(false);
   });
 
   it('tracks isLoading state during API call', async () => {
@@ -76,7 +90,7 @@ describe('useChangePassword', () => {
     const { result } = renderHook(() => useChangePassword());
     expect(result.current.isLoading).toBe(false);
 
-    let promise: Promise<void>;
+    let promise: Promise<boolean>;
     act(() => {
       promise = result.current.changePassword({
         currentPassword: 'old123456',
@@ -99,7 +113,7 @@ describe('useChangePassword', () => {
 });
 
 describe('useDeleteAccount', () => {
-  it('calls deleteAccount API, shows toast, and navigates to login', async () => {
+  it('calls deleteAccount API, clears tokens, shows toast, and navigates to login', async () => {
     vi.mocked(settingsApi.deleteAccount).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useDeleteAccount());
@@ -109,6 +123,10 @@ describe('useDeleteAccount', () => {
     });
 
     expect(settingsApi.deleteAccount).toHaveBeenCalled();
+    expect(
+      clearTokens,
+      'clearTokens should be called after account deletion to clear in-memory auth state.',
+    ).toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith('Account deleted successfully.');
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });

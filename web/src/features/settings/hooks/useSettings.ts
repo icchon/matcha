@@ -2,29 +2,32 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as settingsApi from '@/api/settings';
+import { clearTokens } from '@/api/client';
 import type { ChangePasswordRequest } from '@/api/settings';
 import type { Block } from '@/types';
 
 interface UseChangePasswordReturn {
   readonly isLoading: boolean;
   readonly error: string | null;
-  readonly changePassword: (params: ChangePasswordRequest) => Promise<void>;
+  readonly changePassword: (params: ChangePasswordRequest) => Promise<boolean>;
 }
 
 export function useChangePassword(): UseChangePasswordReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const changePassword = useCallback(async (params: ChangePasswordRequest) => {
+  const changePassword = useCallback(async (params: ChangePasswordRequest): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
       await settingsApi.changePassword(params);
       toast.success('Password changed successfully!');
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to change password';
       setError(message);
       toast.error(message);
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -49,6 +52,7 @@ export function useDeleteAccount(): UseDeleteAccountReturn {
     setError(null);
     try {
       await settingsApi.deleteAccount();
+      clearTokens();
       toast.success('Account deleted successfully.');
       navigate('/login');
     } catch (err) {
