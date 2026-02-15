@@ -327,7 +327,7 @@ func (s *authService) Logout(ctx context.Context, userID uuid.UUID) error {
 	if len(refreshToken) != 1 {
 		return apperrors.ErrNotFound
 	}
-	refreshToken[0].Revoked = false
+	refreshToken[0].Revoked = true
 	refreshToken[0].ExpiresAt = time.Now()
 
 	user, err := s.userRepo.Find(ctx, refreshToken[0].UserID)

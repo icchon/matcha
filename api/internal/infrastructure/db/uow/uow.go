@@ -40,7 +40,11 @@ func (u *unitOfWork) Do(ctx context.Context, fn func(m repo.RepositoryManager) e
 		postgres.NewUserDataRepository(tx),
 	)
 	if err = fn(manager); err != nil {
-		return tx.Rollback()
+		txErr := tx.Rollback()
+		if txErr != nil {
+			return txErr
+		}
+		return err
 	}
 	return tx.Commit()
 }
