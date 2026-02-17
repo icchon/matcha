@@ -2,6 +2,7 @@ package uow
 
 import (
 	"context"
+	"errors"
 	"github.com/icchon/matcha/api/internal/domain/repo"
 	"github.com/icchon/matcha/api/internal/infrastructure/db/postgres"
 	"github.com/jmoiron/sqlx"
@@ -42,7 +43,7 @@ func (u *unitOfWork) Do(ctx context.Context, fn func(m repo.RepositoryManager) e
 	if err = fn(manager); err != nil {
 		txErr := tx.Rollback()
 		if txErr != nil {
-			return txErr
+			return errors.Join(err, txErr)
 		}
 		return err
 	}
