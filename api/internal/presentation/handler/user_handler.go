@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -221,6 +222,11 @@ func (h *UserHandler) CreateMyUserDataHandler(w http.ResponseWriter, r *http.Req
 	helper.RespondWithJSON(w, http.StatusCreated, userData)
 }
 
+type UpdateMyUserDataRequest struct {
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
 // UpdateMyUserDataHandler handles PUT /users/me/data
 func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
@@ -229,14 +235,47 @@ func (h *UserHandler) UpdateMyUserDataHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var userData entity.UserData
-	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
+	var req UpdateMyUserDataRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.HandleError(w, apperrors.ErrInvalidInput)
 		return
 	}
-	userData.UserID = userID
 
-	helper.RespondWithJSON(w, http.StatusOK, userData)
+	userData := entity.UserData{
+		UserID: userID,
+	}
+	if req.Latitude != nil {
+		userData.Latitude = sql.NullFloat64{Float64: *req.Latitude, Valid: true}
+	}
+	if req.Longitude != nil {
+		userData.Longitude = sql.NullFloat64{Float64: *req.Longitude, Valid: true}
+	}
+
+	if err := h.userService.UpdateUserData(r.Context(), &userData); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	res := map[string]interface{}{
+		"user_id": userData.UserID,
+	}
+	if userData.Latitude.Valid {
+		res["latitude"] = userData.Latitude.Float64
+	} else {
+		res["latitude"] = nil
+	}
+	if userData.Longitude.Valid {
+		res["longitude"] = userData.Longitude.Float64
+	} else {
+		res["longitude"] = nil
+	}
+	if userData.InternalScore.Valid {
+		res["internal_score"] = userData.InternalScore.Int32
+	} else {
+		res["internal_score"] = nil
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // GetAllTagsHandler handles GET /tags
