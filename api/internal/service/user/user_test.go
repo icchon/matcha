@@ -222,18 +222,24 @@ func TestUserService_LikeUser(t *testing.T) {
 	likedID := uuid.New()
 	dbErr := errors.New("db error")
 
+	user1ID, user2ID := likerID, likedID
+	if likerID.String() > likedID.String() {
+		user1ID, user2ID = likedID, likerID
+	}
+
 	testCases := []struct {
 		name               string
-		setupMocks         func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository)
+		setupMocks         func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository, notifSvcMock *mock.MockNotificationService)
 		isMatch            bool
 		expectedConnection *entity.Connection
 		expectedErr        error
 	}{
 		{
 			name: "Success - First Like (No Match)",
-			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository, notifSvcMock *mock.MockNotificationService) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifLike).Return(nil, nil)
 			},
 			isMatch:            false,
 			expectedConnection: nil,
@@ -241,18 +247,21 @@ func TestUserService_LikeUser(t *testing.T) {
 		},
 		{
 			name: "Success - Second Like (Match)",
-			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository, notifSvcMock *mock.MockNotificationService) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(&entity.Like{}, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 				connRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifLike).Return(nil, nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifMatch).Return(nil, nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likedID, likerID, entity.NotifMatch).Return(nil, nil)
 			},
 			isMatch:            true,
-			expectedConnection: &entity.Connection{User1ID: likerID, User2ID: likedID},
+			expectedConnection: &entity.Connection{User1ID: user1ID, User2ID: user2ID},
 			expectedErr:        nil,
 		},
 		{
 			name: "Find Fails",
-			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository, notifSvcMock *mock.MockNotificationService) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, dbErr)
 			},
 			isMatch:            false,
@@ -261,7 +270,7 @@ func TestUserService_LikeUser(t *testing.T) {
 		},
 		{
 			name: "Like Create Fails",
-			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository, notifSvcMock *mock.MockNotificationService) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(dbErr)
 			},
@@ -279,19 +288,26 @@ func TestUserService_LikeUser(t *testing.T) {
 			likeRepo := mock.NewMockLikeRepository(ctrl)
 			likeQueryRepo := mock.NewMockLikeQueryRepository(ctrl)
 			connRepo := mock.NewMockConnectionRepository(ctrl)
+			notifSvc := mock.NewMockNotificationService(ctrl)
 			if tc.setupMocks != nil {
-				tc.setupMocks(likeRepo, likeQueryRepo, connRepo)
+				tc.setupMocks(likeRepo, likeQueryRepo, connRepo, notifSvc)
 			}
 
 			mockRM := &mockRepositoryManager{likeRepo: likeRepo, connectionRepo: connRepo}
 			mockUOW := &mockUow{rm: mockRM}
 
-			service := &userService{uow: mockUOW, likeRepo: likeQueryRepo}
+			service := &userService{uow: mockUOW, likeRepo: likeQueryRepo, notifSvc: notifSvc}
 
 			conn, err := service.LikeUser(context.Background(), likerID, likedID)
 
 			assert.Equal(t, tc.expectedErr, err)
-			assert.Equal(t, tc.expectedConnection, conn)
+			if tc.expectedConnection != nil && conn != nil {
+				// Don't compare created_at
+				assert.Equal(t, tc.expectedConnection.User1ID, conn.User1ID)
+				assert.Equal(t, tc.expectedConnection.User2ID, conn.User2ID)
+			} else {
+				assert.Equal(t, tc.expectedConnection, conn)
+			}
 		})
 	}
 }
@@ -360,29 +376,39 @@ func TestUserService_UnlikeUser(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		setupMocks  func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository)
+		setupMocks  func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService)
 		expectedErr error
 	}{
 		{
 			name: "Success",
-			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService) {
 				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
 				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
+				notifServiceMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifUnlike).Return(nil, nil)
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "LikeRepo Delete fails",
-			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService) {
 				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(dbErr)
 			},
 			expectedErr: dbErr,
 		},
 		{
 			name: "ConnRepo Delete fails",
-			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository) {
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService) {
 				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
 				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(dbErr)
+			},
+			expectedErr: dbErr,
+		},
+		{
+			name: "Notification Service fails",
+			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService) {
+				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
+				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
+				notifServiceMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifUnlike).Return(nil, dbErr)
 			},
 			expectedErr: dbErr,
 		},
@@ -395,13 +421,14 @@ func TestUserService_UnlikeUser(t *testing.T) {
 
 			likeRepo := mock.NewMockLikeRepository(ctrl)
 			connRepo := mock.NewMockConnectionRepository(ctrl)
+			notifService := mock.NewMockNotificationService(ctrl)
 			if tc.setupMocks != nil {
-				tc.setupMocks(likeRepo, connRepo)
+				tc.setupMocks(likeRepo, connRepo, notifService)
 			}
 
 			mockRM := &mockRepositoryManager{likeRepo: likeRepo, connectionRepo: connRepo}
 			mockUOW := &mockUow{rm: mockRM}
-			service := &userService{uow: mockUOW}
+			service := NewUserService(mockUOW, nil, nil, nil, notifService, nil, nil, nil) // Pass notifService
 			err := service.UnlikeUser(context.Background(), likerID, likedID)
 			assert.Equal(t, tc.expectedErr, err)
 		})
@@ -503,8 +530,7 @@ func TestUserService_FindMyViewedList(t *testing.T) {
 func TestUserService_FindConnections(t *testing.T) {
 	userID := uuid.New()
 	dbErr := errors.New("db error")
-	conns1 := []*entity.Connection{{User1ID: userID}}
-	conns2 := []*entity.Connection{{User2ID: userID}}
+	expectedConns := []*entity.Connection{{User1ID: userID}}
 
 	testCases := []struct {
 		name          string
@@ -515,25 +541,15 @@ func TestUserService_FindConnections(t *testing.T) {
 		{
 			name: "Success",
 			setupMocks: func(connQueryRepo *mock.MockConnectionQueryRepository) {
-				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(conns1, nil)
-				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User2ID: &userID}).Return(conns2, nil)
+				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(expectedConns, nil)
 			},
-			expectedConns: append(conns1, conns2...),
+			expectedConns: expectedConns,
 			expectedErr:   nil,
 		},
 		{
-			name: "First query fails",
+			name: "Query fails",
 			setupMocks: func(connQueryRepo *mock.MockConnectionQueryRepository) {
 				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(nil, dbErr)
-			},
-			expectedConns: nil,
-			expectedErr:   dbErr,
-		},
-		{
-			name: "Second query fails",
-			setupMocks: func(connQueryRepo *mock.MockConnectionQueryRepository) {
-				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User1ID: &userID}).Return(conns1, nil)
-				connQueryRepo.EXPECT().Query(gomock.Any(), &repo.ConnectionQuery{User2ID: &userID}).Return(nil, dbErr)
 			},
 			expectedConns: nil,
 			expectedErr:   dbErr,

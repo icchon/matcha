@@ -108,7 +108,7 @@ func (s *profileService) ViewProfile(ctx context.Context, viewerID, viewedID uui
 	}); err != nil {
 		return err
 	}
-	if _, err := s.notifSvc.CreateAndSendNotofication(ctx, viewerID, viewedID, entity.NotifView); err != nil {
+	if _, err := s.notifSvc.CreateAndSendNotification(ctx, viewerID, viewedID, entity.NotifView); err != nil {
 		return err
 	}
 	return nil

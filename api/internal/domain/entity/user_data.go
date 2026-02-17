@@ -6,8 +6,8 @@ import (
 )
 
 type UserData struct {
-	UserID        uuid.UUID       `db:"user_id"`
-	Latitude      sql.NullFloat64 `db:"latitude"`  // DECIMAL(10, 8)
-	Longitude     sql.NullFloat64 `db:"longitude"` // DECIMAL(11, 8)
-	InternalScore sql.NullInt32   `db:"internal_score"`
+	UserID        uuid.UUID       `db:"user_id" json:"user_id"`
+	Latitude      sql.NullFloat64 `db:"latitude" json:"latitude"`
+	Longitude     sql.NullFloat64 `db:"longitude" json:"longitude"`
+	InternalScore sql.NullInt32   `db:"internal_score" json:"internal_score"`
 }

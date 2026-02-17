@@ -129,14 +129,14 @@ func (s *userService) LikeUser(ctx context.Context, likerID, likedID uuid.UUID) 
 	}); err != nil {
 		return nil, err
 	}
-	if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likerID, likedID, entity.NotifLike); err != nil {
+	if _, err := s.notifSvc.CreateAndSendNotification(ctx, likerID, likedID, entity.NotifLike); err != nil {
 		return nil, err
 	}
 	if love {
-		if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likerID, likedID, entity.NotifMatch); err != nil {
+		if _, err := s.notifSvc.CreateAndSendNotification(ctx, likerID, likedID, entity.NotifMatch); err != nil {
 			return nil, err
 		}
-		if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likedID, likerID, entity.NotifMatch); err != nil {
+		if _, err := s.notifSvc.CreateAndSendNotification(ctx, likedID, likerID, entity.NotifMatch); err != nil {
 			return nil, err
 		}
 	}
@@ -155,7 +155,7 @@ func (s *userService) UnlikeUser(ctx context.Context, likerID, likedID uuid.UUID
 	}); err != nil {
 		return err
 	}
-	if _, err := s.notifSvc.CreateAndSendNotofication(ctx, likerID, likedID, entity.NotifUnlike); err != nil {
+	if _, err := s.notifSvc.CreateAndSendNotification(ctx, likerID, likedID, entity.NotifUnlike); err != nil {
 		return err
 	}
 	return nil

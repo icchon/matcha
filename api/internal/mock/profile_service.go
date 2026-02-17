@@ -161,6 +161,21 @@ func (mr *MockProfileServiceMockRecorder) ListProfiles(ctx, selfUserID, lat, lon
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProfiles", reflect.TypeOf((*MockProfileService)(nil).ListProfiles), ctx, selfUserID, lat, lon, dist, ageMin, ageMax, gender)
 }
 
+// RecommendProfiles mocks base method.
+func (m *MockProfileService) RecommendProfiles(ctx context.Context, selfUserID uuid.UUID) ([]*entity.UserProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecommendProfiles", ctx, selfUserID)
+	ret0, _ := ret[0].([]*entity.UserProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecommendProfiles indicates an expected call of RecommendProfiles.
+func (mr *MockProfileServiceMockRecorder) RecommendProfiles(ctx, selfUserID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendProfiles", reflect.TypeOf((*MockProfileService)(nil).RecommendProfiles), ctx, selfUserID)
+}
+
 // UpdatePictureStatus mocks base method.
 func (m *MockProfileService) UpdatePictureStatus(ctx context.Context, userID uuid.UUID, pictureID int32, isProfilePic bool) error {
 	m.ctrl.T.Helper()

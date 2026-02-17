@@ -1,7 +1,9 @@
 package handler
 
 import (
-	"log" // Add this import
+	"errors"
+	"io"
+	"log"
 	"net/http"
 
 	"database/sql"
@@ -159,8 +161,54 @@ func (h *ProfileHandler) UpdateProfileHandler(w http.ResponseWriter, r *http.Req
 	helper.RespondWithJSON(w, http.StatusOK, res)
 }
 
+type UploadProfilePictureResponse struct {
+	PictureID int32     `json:"picture_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	URL       string    `json:"url"`
+}
+
 // /profile/pictures POST
 func (h *ProfileHandler) UploadProfilePictureHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrInternalServer)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	file, _, err := r.FormFile("image")
+	if err != nil {
+		if errors.Is(err, http.ErrMissingFile) {
+			helper.HandleError(w, apperrors.ErrInvalidInput)
+		} else {
+			helper.HandleError(w, apperrors.ErrInternalServer)
+		}
+		return
+	}
+	defer file.Close()
+
+	imageBytes, err := io.ReadAll(file)
+	if err != nil {
+		helper.HandleError(w, apperrors.ErrInternalServer)
+		return
+	}
+
+	picture, err := h.profileSvc.UploadPicture(r.Context(), userID, imageBytes)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	res := UploadProfilePictureResponse{
+		PictureID: picture.ID,
+		UserID:    picture.UserID,
+		URL:       picture.URL,
+	}
+	helper.RespondWithJSON(w, http.StatusOK, res)
 }
 
 // /profile/pictures/{pictureID} DELETE
