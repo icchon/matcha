@@ -42,19 +42,19 @@ func (m *MockNotificationService) EXPECT() *MockNotificationServiceMockRecorder 
 	return m.recorder
 }
 
-// CreateAndSendNotofication mocks base method.
-func (m *MockNotificationService) CreateAndSendNotofication(ctx context.Context, senderID, recipiendID uuid.UUID, notifType entity.NotificationType) (*entity.Notification, error) {
+// CreateAndSendNotification mocks base method.
+func (m *MockNotificationService) CreateAndSendNotification(ctx context.Context, senderID, recipiendID uuid.UUID, notifType entity.NotificationType) (*entity.Notification, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndSendNotofication", ctx, senderID, recipiendID, notifType)
+	ret := m.ctrl.Call(m, "CreateAndSendNotification", ctx, senderID, recipiendID, notifType)
 	ret0, _ := ret[0].(*entity.Notification)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateAndSendNotofication indicates an expected call of CreateAndSendNotofication.
-func (mr *MockNotificationServiceMockRecorder) CreateAndSendNotofication(ctx, senderID, recipiendID, notifType any) *gomock.Call {
+// CreateAndSendNotification indicates an expected call of CreateAndSendNotification.
+func (mr *MockNotificationServiceMockRecorder) CreateAndSendNotification(ctx, senderID, recipiendID, notifType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndSendNotofication", reflect.TypeOf((*MockNotificationService)(nil).CreateAndSendNotofication), ctx, senderID, recipiendID, notifType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndSendNotification", reflect.TypeOf((*MockNotificationService)(nil).CreateAndSendNotification), ctx, senderID, recipiendID, notifType)
 }
 
 // GetNotifications mocks base method.

@@ -124,7 +124,7 @@ func (h *subscriberHandler) ChatSubscHandler(ctx context.Context, payload *clien
 	if err := h.chatPub.Publish(ctx, chatBytes); err != nil {
 		return err
 	}
-	if _, err := h.notifService.CreateAndSendNotofication(ctx, msg.SenderID, msg.RecipientID, entity.NotifMessage); err != nil {
+	if _, err := h.notifService.CreateAndSendNotification(ctx, msg.SenderID, msg.RecipientID, entity.NotifMessage); err != nil {
 		return err
 	}
 	return nil

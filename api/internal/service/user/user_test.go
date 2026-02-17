@@ -239,7 +239,7 @@ func TestUserService_LikeUser(t *testing.T) {
 			setupMocks: func(likeRepoMock *mock.MockLikeRepository, likeQueryRepoMock *mock.MockLikeQueryRepository, connRepoMock *mock.MockConnectionRepository, notifSvcMock *mock.MockNotificationService) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(nil, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-				notifSvcMock.EXPECT().CreateAndSendNotofication(gomock.Any(), likerID, likedID, entity.NotifLike).Return(nil, nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifLike).Return(nil, nil)
 			},
 			isMatch:            false,
 			expectedConnection: nil,
@@ -251,9 +251,9 @@ func TestUserService_LikeUser(t *testing.T) {
 				likeQueryRepoMock.EXPECT().Find(gomock.Any(), likedID, likerID).Return(&entity.Like{}, nil)
 				likeRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 				connRepoMock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-				notifSvcMock.EXPECT().CreateAndSendNotofication(gomock.Any(), likerID, likedID, entity.NotifLike).Return(nil, nil)
-				notifSvcMock.EXPECT().CreateAndSendNotofication(gomock.Any(), likerID, likedID, entity.NotifMatch).Return(nil, nil)
-				notifSvcMock.EXPECT().CreateAndSendNotofication(gomock.Any(), likedID, likerID, entity.NotifMatch).Return(nil, nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifLike).Return(nil, nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifMatch).Return(nil, nil)
+				notifSvcMock.EXPECT().CreateAndSendNotification(gomock.Any(), likedID, likerID, entity.NotifMatch).Return(nil, nil)
 			},
 			isMatch:            true,
 			expectedConnection: &entity.Connection{User1ID: user1ID, User2ID: user2ID},
@@ -384,7 +384,7 @@ func TestUserService_UnlikeUser(t *testing.T) {
 			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService) {
 				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
 				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
-				notifServiceMock.EXPECT().CreateAndSendNotofication(gomock.Any(), likerID, likedID, entity.NotifUnlike).Return(nil, nil)
+				notifServiceMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifUnlike).Return(nil, nil)
 			},
 			expectedErr: nil,
 		},
@@ -408,7 +408,7 @@ func TestUserService_UnlikeUser(t *testing.T) {
 			setupMocks: func(likeRepo *mock.MockLikeRepository, connRepo *mock.MockConnectionRepository, notifServiceMock *mock.MockNotificationService) {
 				likeRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
 				connRepo.EXPECT().Delete(gomock.Any(), likerID, likedID).Return(nil)
-				notifServiceMock.EXPECT().CreateAndSendNotofication(gomock.Any(), likerID, likedID, entity.NotifUnlike).Return(nil, dbErr)
+				notifServiceMock.EXPECT().CreateAndSendNotification(gomock.Any(), likerID, likedID, entity.NotifUnlike).Return(nil, dbErr)
 			},
 			expectedErr: dbErr,
 		},
