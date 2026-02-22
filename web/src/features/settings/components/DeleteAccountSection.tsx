@@ -25,8 +25,8 @@ const DeleteAccountSection: FC = () => {
     reset();
   };
 
-  const onSubmit = async () => {
-    await deleteAccount();
+  const onSubmit = async (data: DeleteAccountFormData) => {
+    await deleteAccount({ currentPassword: data.currentPassword });
     // Navigation to /login happens inside the hook — no need to close modal
     // as the component will unmount. Calling closeModal() here would trigger
     // a React state update on an unmounted component.
@@ -44,9 +44,16 @@ const DeleteAccountSection: FC = () => {
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title="Delete Account">
         <p className="mb-4 text-sm text-gray-600">
-          This action is irreversible. Type DELETE to confirm.
+          Enter your current password and type DELETE to confirm.
         </p>
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+          <Input
+            label="Current Password"
+            type="password"
+            autoComplete="current-password"
+            error={errors.currentPassword?.message}
+            {...register('currentPassword')}
+          />
           <Input
             label="Confirm"
             placeholder="DELETE"

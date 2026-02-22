@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 
 const BlockList: FC = () => {
-  const { blocks, isLoading, error, fetchBlockList, unblock } = useBlockList();
+  const { blocks, isLoading, error, unblockingId, fetchBlockList, unblock } = useBlockList();
 
   useEffect(() => {
     fetchBlockList();
@@ -24,7 +24,7 @@ const BlockList: FC = () => {
         <p className="text-sm text-red-600">{error}</p>
       ) : null}
 
-      {blocks.length === 0 ? (
+      {!error && blocks.length === 0 ? (
         <p className="text-sm text-gray-500">No blocked users.</p>
       ) : (
         <ul className="divide-y divide-gray-200">
@@ -33,11 +33,14 @@ const BlockList: FC = () => {
               key={block.blockedId}
               className="flex items-center justify-between py-3"
             >
+              {/* TODO(BE-XX): Display username instead of raw ID once backend provides user info */}
               <span className="text-sm text-gray-900">{block.blockedId}</span>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => unblock(block.blockedId)}
+                disabled={unblockingId === block.blockedId}
+                loading={unblockingId === block.blockedId}
               >
                 Unblock
               </Button>

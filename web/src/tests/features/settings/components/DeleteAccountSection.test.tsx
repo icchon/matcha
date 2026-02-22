@@ -42,8 +42,8 @@ describe('DeleteAccountSection', () => {
       'Should open a confirmation modal dialog.',
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/type DELETE to confirm/i),
-      'Modal should instruct user to type DELETE.',
+      screen.getByText(/enter your current password and type DELETE to confirm/i),
+      'Modal should instruct user to enter password and type DELETE.',
     ).toBeInTheDocument();
   });
 
@@ -52,6 +52,7 @@ describe('DeleteAccountSection', () => {
     render(<DeleteAccountSection />);
 
     await user.click(screen.getByRole('button', { name: /delete account/i }));
+    await user.type(screen.getByLabelText(/current password/i), 'mypass123');
     await user.type(screen.getByLabelText(/confirm/i), 'wrong');
     await user.click(screen.getByRole('button', { name: /confirm delete/i }));
 
@@ -63,8 +64,7 @@ describe('DeleteAccountSection', () => {
     });
   });
 
-  it('calls deleteAccount when "DELETE" is typed and confirmed', async () => {
-    mockDeleteAccount.mockResolvedValue(undefined);
+  it('does not call deleteAccount when currentPassword is empty', async () => {
     const user = userEvent.setup();
     render(<DeleteAccountSection />);
 
@@ -75,8 +75,26 @@ describe('DeleteAccountSection', () => {
     await waitFor(() => {
       expect(
         mockDeleteAccount,
-        'deleteAccount should be called after typing "DELETE" and confirming.',
-      ).toHaveBeenCalled();
+        'deleteAccount should not be called when currentPassword is empty.',
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  it('calls deleteAccount with currentPassword when form is valid', async () => {
+    mockDeleteAccount.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<DeleteAccountSection />);
+
+    await user.click(screen.getByRole('button', { name: /delete account/i }));
+    await user.type(screen.getByLabelText(/current password/i), 'mypass123');
+    await user.type(screen.getByLabelText(/confirm/i), 'DELETE');
+    await user.click(screen.getByRole('button', { name: /confirm delete/i }));
+
+    await waitFor(() => {
+      expect(
+        mockDeleteAccount,
+        'deleteAccount should be called with currentPassword after valid form submission.',
+      ).toHaveBeenCalledWith({ currentPassword: 'mypass123' });
     });
   });
 

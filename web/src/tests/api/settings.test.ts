@@ -16,6 +16,13 @@ vi.mock('@/api/client', () => ({
     put: vi.fn(),
     delete: vi.fn(),
   },
+  ApiClientError: class extends Error {
+    readonly status: number;
+    constructor(status: number, body: { error: string }) {
+      super(body.error);
+      this.status = status;
+    }
+  },
 }));
 
 const mockGet = vi.mocked(apiClient.get);
@@ -27,20 +34,20 @@ beforeEach(() => {
 });
 
 describe('deleteAccount', () => {
-  it('calls DELETE /me/ to delete the current user account', async () => {
-    mockDelete.mockResolvedValue(undefined);
+  it('calls POST /me/delete with currentPassword to delete the current user account', async () => {
+    mockPost.mockResolvedValue(undefined);
 
-    await deleteAccount();
+    await deleteAccount({ currentPassword: 'mypass123' });
 
     expect(
-      mockDelete,
-      'deleteAccount should call DELETE on USERS.DELETE_ME path. Check API_PATHS.USERS.DELETE_ME.',
-    ).toHaveBeenCalledWith(API_PATHS.USERS.DELETE_ME);
+      mockPost,
+      'deleteAccount should call POST on USERS.DELETE_ACCOUNT path with currentPassword.',
+    ).toHaveBeenCalledWith(API_PATHS.USERS.DELETE_ACCOUNT, { currentPassword: 'mypass123' });
   });
 });
 
 describe('changePassword', () => {
-  it('calls POST /auth/password/reset with currentPassword and newPassword', async () => {
+  it('calls POST AUTH.CHANGE_PASSWORD with currentPassword and newPassword', async () => {
     const response: MessageResponse = { message: 'Password changed' };
     mockPost.mockResolvedValue(response);
 
@@ -51,8 +58,8 @@ describe('changePassword', () => {
 
     expect(
       mockPost,
-      'changePassword should POST to AUTH.PASSWORD_RESET with current and new passwords.',
-    ).toHaveBeenCalledWith(API_PATHS.AUTH.PASSWORD_RESET, {
+      'changePassword should POST to AUTH.CHANGE_PASSWORD with current and new passwords.',
+    ).toHaveBeenCalledWith(API_PATHS.AUTH.CHANGE_PASSWORD, {
       currentPassword: 'oldpass123',
       newPassword: 'newpass123',
     });

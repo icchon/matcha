@@ -63,8 +63,8 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     await user.type(screen.getByLabelText(/current password/i), 'oldpass123');
-    await user.type(screen.getByLabelText(/new password/i), 'newpass123');
-    await user.type(screen.getByLabelText(/confirm password/i), 'different123');
+    await user.type(screen.getByLabelText(/new password/i), 'Newpass1!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Different1!');
     await user.click(screen.getByRole('button', { name: /change password/i }));
 
     await waitFor(() => {
@@ -81,8 +81,8 @@ describe('ChangePasswordForm', () => {
     render(<ChangePasswordForm />);
 
     await user.type(screen.getByLabelText(/current password/i), 'oldpass123');
-    await user.type(screen.getByLabelText(/new password/i), 'newpass123');
-    await user.type(screen.getByLabelText(/confirm password/i), 'newpass123');
+    await user.type(screen.getByLabelText(/new password/i), 'Newpass1!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Newpass1!');
     await user.click(screen.getByRole('button', { name: /change password/i }));
 
     await waitFor(() => {
@@ -91,7 +91,7 @@ describe('ChangePasswordForm', () => {
         'Should call changePassword hook with currentPassword and newPassword.',
       ).toHaveBeenCalledWith({
         currentPassword: 'oldpass123',
-        newPassword: 'newpass123',
+        newPassword: 'Newpass1!',
       });
     });
   });

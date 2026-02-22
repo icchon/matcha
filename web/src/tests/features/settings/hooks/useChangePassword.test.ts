@@ -4,7 +4,17 @@ import { useChangePassword } from '@/features/settings/hooks/useChangePassword';
 import * as settingsApi from '@/api/settings';
 import type { MessageResponse } from '@/types';
 
+const mockNavigate = vi.fn();
+const mockLogout = vi.fn();
+
 vi.mock('@/api/settings');
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: { logout: () => void }) => unknown) =>
+    selector({ logout: mockLogout }),
+}));
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -19,7 +29,7 @@ beforeEach(() => {
 });
 
 describe('useChangePassword', () => {
-  it('calls changePassword API, shows success toast, and returns true', async () => {
+  it('calls changePassword API, shows success toast, logs out, and navigates to login', async () => {
     const response: MessageResponse = { message: 'Password changed' };
     vi.mocked(settingsApi.changePassword).mockResolvedValue(response);
 
@@ -40,7 +50,15 @@ describe('useChangePassword', () => {
       currentPassword: 'oldpass123',
       newPassword: 'newpass123',
     });
-    expect(toast.success).toHaveBeenCalledWith('Password changed successfully!');
+    expect(toast.success).toHaveBeenCalledWith('Password changed successfully! Please log in again.');
+    expect(
+      mockLogout,
+      'logout should be called to clear session after password change.',
+    ).toHaveBeenCalled();
+    expect(
+      mockNavigate,
+      'Should navigate to /login after password change.',
+    ).toHaveBeenCalledWith('/login');
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(
@@ -49,7 +67,7 @@ describe('useChangePassword', () => {
     ).toBe(true);
   });
 
-  it('sets error on changePassword failure and returns false', async () => {
+  it('sets error on changePassword failure and returns false without navigating', async () => {
     vi.mocked(settingsApi.changePassword).mockRejectedValue(new Error('Wrong password'));
 
     const { result } = renderHook(() => useChangePassword());
@@ -67,6 +85,14 @@ describe('useChangePassword', () => {
       'Error should be set when changePassword fails. Check error extraction.',
     ).toBe('Wrong password');
     expect(toast.error).toHaveBeenCalled();
+    expect(
+      mockLogout,
+      'logout should not be called on failure.',
+    ).not.toHaveBeenCalled();
+    expect(
+      mockNavigate,
+      'Should not navigate on failure.',
+    ).not.toHaveBeenCalled();
     expect(
       success,
       'changePassword should return false on failure so form is not reset.',

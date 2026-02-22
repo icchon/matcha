@@ -7,15 +7,21 @@ export interface ChangePasswordRequest {
   readonly newPassword: string;
 }
 
-export async function deleteAccount(): Promise<void> {
-  await apiClient.delete(API_PATHS.USERS.DELETE_ME);
+export interface DeleteAccountRequest {
+  readonly currentPassword: string;
 }
 
-// Reuses PASSWORD_RESET endpoint — backend differentiates by presence of currentPassword vs token
+export async function deleteAccount(params: DeleteAccountRequest): Promise<void> {
+  // Uses POST instead of DELETE to include re-authentication body
+  await apiClient.post(API_PATHS.USERS.DELETE_ACCOUNT, params);
+}
+
+// Uses dedicated CHANGE_PASSWORD path (currently shares endpoint with PASSWORD_RESET;
+// backend differentiates by presence of currentPassword vs token)
 export async function changePassword(
   params: ChangePasswordRequest,
 ): Promise<MessageResponse> {
-  return apiClient.post<MessageResponse>(API_PATHS.AUTH.PASSWORD_RESET, params);
+  return apiClient.post<MessageResponse>(API_PATHS.AUTH.CHANGE_PASSWORD, params);
 }
 
 export async function getBlockList(): Promise<Block[]> {

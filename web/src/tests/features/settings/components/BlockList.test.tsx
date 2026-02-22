@@ -15,12 +15,14 @@ const blocks: Block[] = [
 let mockBlocks: Block[] = [];
 let mockIsLoading = false;
 let mockError: string | null = null;
+let mockUnblockingId: string | null = null;
 
 vi.mock('@/features/settings/hooks/useBlockList', () => ({
   useBlockList: () => ({
     blocks: mockBlocks,
     isLoading: mockIsLoading,
     error: mockError,
+    unblockingId: mockUnblockingId,
     fetchBlockList: mockFetchBlockList,
     unblock: mockUnblock,
   }),
@@ -31,6 +33,7 @@ beforeEach(() => {
   mockBlocks = [];
   mockIsLoading = false;
   mockError = null;
+  mockUnblockingId = null;
 });
 
 describe('BlockList', () => {
@@ -53,14 +56,26 @@ describe('BlockList', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows empty message when no blocked users', () => {
+  it('shows empty message when no blocked users and no error', () => {
     mockBlocks = [];
     render(<BlockList />);
 
     expect(
       screen.getByText(/no blocked users/i),
-      'Should show "No blocked users" when list is empty.',
+      'Should show "No blocked users" when list is empty and no error.',
     ).toBeInTheDocument();
+  });
+
+  it('does not show empty message when error exists', () => {
+    mockBlocks = [];
+    mockError = 'Failed to load';
+    render(<BlockList />);
+
+    expect(
+      screen.queryByText(/no blocked users/i),
+      'Should not show "No blocked users" when there is an error.',
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
   });
 
   it('renders list of blocked users with unblock buttons', () => {
@@ -103,5 +118,21 @@ describe('BlockList', () => {
       screen.getByText('Failed to load'),
       'Should display the error message.',
     ).toBeInTheDocument();
+  });
+
+  it('disables unblock button for the row being unblocked', () => {
+    mockBlocks = blocks;
+    mockUnblockingId = 'user-2';
+    render(<BlockList />);
+
+    const unblockButtons = screen.getAllByRole('button', { name: /unblock/i });
+    expect(
+      unblockButtons[0],
+      'Unblock button for the row being unblocked should be disabled.',
+    ).toBeDisabled();
+    expect(
+      unblockButtons[1],
+      'Unblock button for other rows should remain enabled.',
+    ).not.toBeDisabled();
   });
 });

@@ -10,8 +10,8 @@ describe('changePasswordSchema', () => {
   it('accepts valid input with matching passwords', () => {
     const input: ChangePasswordFormData = {
       currentPassword: 'oldpass123',
-      newPassword: 'newpass123',
-      confirmPassword: 'newpass123',
+      newPassword: 'Newpass1!',
+      confirmPassword: 'Newpass1!',
     };
     const result = changePasswordSchema.safeParse(input);
 
@@ -24,8 +24,8 @@ describe('changePasswordSchema', () => {
   it('rejects when currentPassword is too short', () => {
     const result = changePasswordSchema.safeParse({
       currentPassword: 'short',
-      newPassword: 'newpass123',
-      confirmPassword: 'newpass123',
+      newPassword: 'Newpass1!',
+      confirmPassword: 'Newpass1!',
     });
 
     expect(
@@ -37,8 +37,8 @@ describe('changePasswordSchema', () => {
   it('rejects when newPassword is too short', () => {
     const result = changePasswordSchema.safeParse({
       currentPassword: 'oldpass123',
-      newPassword: 'short',
-      confirmPassword: 'short',
+      newPassword: 'Short1!',
+      confirmPassword: 'Short1!',
     });
 
     expect(
@@ -47,11 +47,50 @@ describe('changePasswordSchema', () => {
     ).toBe(false);
   });
 
+  it('rejects when newPassword lacks uppercase letter', () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: 'oldpass123',
+      newPassword: 'newpass1!',
+      confirmPassword: 'newpass1!',
+    });
+
+    expect(
+      result.success,
+      'newPassword without uppercase letter should fail. Check .regex(/[A-Z]/) validation.',
+    ).toBe(false);
+  });
+
+  it('rejects when newPassword lacks a number', () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: 'oldpass123',
+      newPassword: 'Newpasss!',
+      confirmPassword: 'Newpasss!',
+    });
+
+    expect(
+      result.success,
+      'newPassword without a number should fail. Check .regex(/[0-9]/) validation.',
+    ).toBe(false);
+  });
+
+  it('rejects when newPassword lacks a special character', () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: 'oldpass123',
+      newPassword: 'Newpass12',
+      confirmPassword: 'Newpass12',
+    });
+
+    expect(
+      result.success,
+      'newPassword without special character should fail. Check .regex(/[^a-zA-Z0-9]/) validation.',
+    ).toBe(false);
+  });
+
   it('rejects when newPassword is same as currentPassword', () => {
     const result = changePasswordSchema.safeParse({
-      currentPassword: 'samepass123',
-      newPassword: 'samepass123',
-      confirmPassword: 'samepass123',
+      currentPassword: 'Samepass1!',
+      newPassword: 'Samepass1!',
+      confirmPassword: 'Samepass1!',
     });
 
     expect(
@@ -72,8 +111,8 @@ describe('changePasswordSchema', () => {
   it('rejects when confirmPassword does not match newPassword', () => {
     const result = changePasswordSchema.safeParse({
       currentPassword: 'oldpass123',
-      newPassword: 'newpass123',
-      confirmPassword: 'different123',
+      newPassword: 'Newpass1!',
+      confirmPassword: 'Different1!',
     });
 
     expect(
@@ -91,33 +130,33 @@ describe('changePasswordSchema', () => {
     }
   });
 
-  it('rejects when confirmPassword is empty', () => {
+  it('rejects when confirmPassword is too short', () => {
     const result = changePasswordSchema.safeParse({
       currentPassword: 'oldpass123',
-      newPassword: 'newpass123',
-      confirmPassword: '',
+      newPassword: 'Newpass1!',
+      confirmPassword: 'short',
     });
 
     expect(
       result.success,
-      'Empty confirmPassword should fail. Check min(1) validation.',
+      'confirmPassword shorter than 8 chars should fail. Check min(8) validation.',
     ).toBe(false);
   });
 });
 
 describe('deleteAccountSchema', () => {
-  it('accepts when confirmText is exactly "DELETE"', () => {
-    const input: DeleteAccountFormData = { confirmText: 'DELETE' };
+  it('accepts when confirmText is exactly "DELETE" and currentPassword is provided', () => {
+    const input: DeleteAccountFormData = { confirmText: 'DELETE', currentPassword: 'mypass123' };
     const result = deleteAccountSchema.safeParse(input);
 
     expect(
       result.success,
-      'confirmText "DELETE" should pass validation. Check literal or refine().',
+      'confirmText "DELETE" with currentPassword should pass validation.',
     ).toBe(true);
   });
 
   it('rejects when confirmText is not "DELETE"', () => {
-    const result = deleteAccountSchema.safeParse({ confirmText: 'delete' });
+    const result = deleteAccountSchema.safeParse({ confirmText: 'delete', currentPassword: 'mypass123' });
 
     expect(
       result.success,
@@ -126,11 +165,20 @@ describe('deleteAccountSchema', () => {
   });
 
   it('rejects when confirmText is empty', () => {
-    const result = deleteAccountSchema.safeParse({ confirmText: '' });
+    const result = deleteAccountSchema.safeParse({ confirmText: '', currentPassword: 'mypass123' });
 
     expect(
       result.success,
       'Empty confirmText should fail. Check min(1) validation.',
+    ).toBe(false);
+  });
+
+  it('rejects when currentPassword is empty', () => {
+    const result = deleteAccountSchema.safeParse({ confirmText: 'DELETE', currentPassword: '' });
+
+    expect(
+      result.success,
+      'Empty currentPassword should fail. Check min(1) validation on currentPassword.',
     ).toBe(false);
   });
 });

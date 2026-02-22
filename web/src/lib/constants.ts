@@ -7,6 +7,9 @@ export const API_PATHS = {
     SEND_VERIFICATION: '/auth/verify/mail',
     PASSWORD_FORGOT: '/auth/password/forgot',
     PASSWORD_RESET: '/auth/password/reset',
+    // Dedicated path for authenticated password change (currently shares endpoint with PASSWORD_RESET;
+    // backend differentiates by presence of currentPassword vs token)
+    CHANGE_PASSWORD: '/auth/password/reset',
     OAUTH_GOOGLE: '/auth/oauth/google/login',
     OAUTH_GITHUB: '/auth/oauth/github/login',
   },
@@ -16,6 +19,7 @@ export const API_PATHS = {
     MY_LIKES: '/me/likes',
     MY_VIEWS: '/me/views',
     DELETE_ME: '/me/',
+    DELETE_ACCOUNT: '/me/delete',
     MY_BLOCKS: '/me/blocks',
     BLOCK: (userId: string) => `/users/${userId}/block`,
     UNBLOCK: (userId: string) => `/users/${userId}/block`,
