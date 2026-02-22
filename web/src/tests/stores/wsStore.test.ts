@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { setTokens, clearTokens } from '@/api/client';
 import { clearAllHandlers } from '@/features/websocket/messageRouter';
 import { useWsStore } from '@/stores/wsStore';
 import type { WsMessage } from '@/stores/wsStore';
@@ -90,9 +91,12 @@ describe('wsStore', () => {
       error: null,
     });
     mockInstances = [];
+    // Set a default token so buildWsUrl does not throw
+    setTokens('test-access-token', 'test-refresh-token');
   });
 
   afterEach(() => {
+    clearTokens();
     vi.useRealTimers();
   });
 
@@ -116,18 +120,15 @@ describe('wsStore', () => {
     });
 
     it('creates WebSocket with token as query param', () => {
-      vi.doMock('@/api/client', async (importOriginal) => {
-        const actual = await importOriginal<typeof import('@/api/client')>();
-        return { ...actual, getAccessToken: () => 'test-token-123' };
-      });
+      setTokens('test-token-123', 'refresh-token');
 
       useWsStore.getState().connect('ws://test.example/ws');
       const ws = latestMock();
 
       expect(
         ws.url,
-        'WebSocket URL should include token query param for auth. Check connect() URL construction.',
-      ).toContain('ws://test.example/ws');
+        'WebSocket URL should include token query param for auth. Check buildWsUrl() URL construction.',
+      ).toContain('token=test-token-123');
     });
 
     it('clears previous error on new connect', () => {
@@ -205,6 +206,9 @@ describe('wsStore', () => {
 
   describe('auto-reconnect', () => {
     it('reconnects with exponential backoff on unclean close', () => {
+      // Stub Math.random to remove jitter for deterministic timing
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
@@ -239,9 +243,13 @@ describe('wsStore', () => {
         mockInstances.length,
         'After 4s backoff, should attempt third reconnect (4 total). Check exponential backoff.',
       ).toBe(4);
+
+      vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('caps backoff at 30 seconds', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
       latestMock().simulateClose(1006, false);
@@ -263,6 +271,8 @@ describe('wsStore', () => {
         mockInstances.length,
         'Should reconnect at exactly 30s cap. Check max backoff constant.',
       ).toBe(instancesBefore + 1);
+
+      vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('does not reconnect on clean close (code 1000)', () => {
@@ -284,6 +294,8 @@ describe('wsStore', () => {
     });
 
     it('resets backoff on successful reconnect', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
       latestMock().simulateClose(1006, false);
@@ -304,6 +316,8 @@ describe('wsStore', () => {
         mockInstances.length,
         'After successful reconnect + disconnect, backoff should reset to 1s. Check backoff reset in onopen.',
       ).toBe(instancesBefore + 1);
+
+      vi.spyOn(Math, 'random').mockRestore();
     });
 
     it('does not reconnect after manual disconnect', () => {
@@ -316,6 +330,54 @@ describe('wsStore', () => {
       expect(
         mockInstances.length,
         'After manual disconnect(), no reconnect should occur. Check intentional disconnect flag.',
+      ).toBe(1);
+    });
+
+    it('stops reconnecting after MAX_RECONNECT_ATTEMPTS', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+
+      // Exhaust all 10 reconnect attempts
+      for (let i = 0; i < 10; i++) {
+        latestMock().simulateClose(1006, false);
+        vi.advanceTimersByTime(30000);
+      }
+
+      // 11th close should not schedule a reconnect
+      latestMock().simulateClose(1006, false);
+      const instancesBefore = mockInstances.length;
+      vi.advanceTimersByTime(60000);
+
+      expect(
+        mockInstances.length,
+        'Should stop reconnecting after MAX_RECONNECT_ATTEMPTS (10). Check reconnect counter.',
+      ).toBe(instancesBefore);
+
+      expect(
+        useWsStore.getState().connectionStatus,
+        'After exhausting reconnect attempts, status should be "disconnected".',
+      ).toBe('disconnected');
+
+      vi.spyOn(Math, 'random').mockRestore();
+    });
+
+    it('does not reconnect on terminal close codes (4401, 4403)', () => {
+      useWsStore.getState().connect('ws://test.example/ws');
+      latestMock().simulateOpen();
+
+      latestMock().simulateClose(4401, false);
+
+      expect(
+        useWsStore.getState().connectionStatus,
+        'After terminal close code 4401, status should be "disconnected".',
+      ).toBe('disconnected');
+
+      vi.advanceTimersByTime(5000);
+      expect(
+        mockInstances.length,
+        'No reconnect should happen after terminal close code. Check TERMINAL_CLOSE_CODES.',
       ).toBe(1);
     });
   });

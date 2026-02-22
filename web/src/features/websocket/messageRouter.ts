@@ -1,4 +1,17 @@
-import type { WsMessage, MessageHandler } from './types';
+import { z } from 'zod';
+import type { MessageHandler } from './types';
+
+const ALLOWED_MESSAGE_TYPES = new Set([
+  'chat.message',
+  'chat.ack',
+  'chat.read',
+  'notification',
+]);
+
+const wsMessageSchema = z.object({
+  type: z.string(),
+  payload: z.unknown(),
+});
 
 const handlers = new Map<string, Set<MessageHandler>>();
 
@@ -27,8 +40,13 @@ export function unregisterHandler(type: string, handler: MessageHandler): void {
 
 export function dispatchMessage(event: MessageEvent): void {
   try {
-    const message = JSON.parse(event.data as string) as WsMessage;
-    if (typeof message.type !== 'string') return;
+    const raw: unknown = JSON.parse(event.data as string);
+    const parsed = wsMessageSchema.safeParse(raw);
+    if (!parsed.success) return;
+
+    const message = parsed.data;
+    if (!ALLOWED_MESSAGE_TYPES.has(message.type)) return;
+
     const typeHandlers = handlers.get(message.type);
     if (typeHandlers) {
       for (const handler of typeHandlers) {

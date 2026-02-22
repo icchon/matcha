@@ -21,6 +21,8 @@ interface ChatActions {
 
 type ChatStore = ChatState & ChatActions;
 
+const MAX_MESSAGES_PER_CONVERSATION = 200;
+
 export const useChatStore = create<ChatStore>()((set) => ({
   conversations: new Map<string, ChatConversation>(),
   unreadCount: 0,
@@ -29,8 +31,13 @@ export const useChatStore = create<ChatStore>()((set) => ({
     set((state) => {
       const newConversations = new Map(state.conversations);
       const existing = newConversations.get(message.senderId);
+      const allMessages = [...(existing?.messages ?? []), message];
+      const cappedMessages = allMessages.length > MAX_MESSAGES_PER_CONVERSATION
+        ? allMessages.slice(allMessages.length - MAX_MESSAGES_PER_CONVERSATION)
+        : allMessages;
+
       const updatedConversation: ChatConversation = {
-        messages: [...(existing?.messages ?? []), message],
+        messages: cappedMessages,
         lastMessageAt: message.timestamp,
       };
       newConversations.set(message.senderId, updatedConversation);

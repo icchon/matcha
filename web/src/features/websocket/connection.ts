@@ -5,10 +5,13 @@ import type { ConnectionStatus } from './types';
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 const BACKOFF_MULTIPLIER = 2;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const TERMINAL_CLOSE_CODES = new Set([4401, 4403]);
 
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let currentBackoff = INITIAL_BACKOFF_MS;
+let reconnectAttempts = 0;
 let intentionalDisconnect = false;
 let currentUrl: string | null = null;
 
@@ -26,24 +29,38 @@ function clearReconnectTimer(): void {
 // 1. Strip token param from access logs to prevent credential leakage
 // 2. Convert query param to Authorization header before forwarding to WS gateway
 // Future: use short-lived WS tickets instead of the access token itself
-function buildWsUrl(baseUrl: string): string {
+export function buildWsUrl(baseUrl: string): string {
   const token = getAccessToken();
-  if (!token) return baseUrl;
+  if (!token) {
+    throw new Error('Cannot connect to WebSocket without an access token');
+  }
 
   const separator = baseUrl.includes('?') ? '&' : '?';
   return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
+function addJitter(delay: number): number {
+  const jitter = delay * 0.5 * Math.random();
+  return delay + jitter;
+}
+
 function scheduleReconnect(set: StatusSetter): void {
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    set({ connectionStatus: 'disconnected', error: 'Maximum reconnection attempts reached' });
+    return;
+  }
+
   clearReconnectTimer();
   set({ connectionStatus: 'reconnecting' });
 
+  const delay = addJitter(currentBackoff);
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
+    reconnectAttempts += 1;
     if (currentUrl) {
       createConnection(currentUrl, set);
     }
-  }, currentBackoff);
+  }, delay);
 
   currentBackoff = Math.min(currentBackoff * BACKOFF_MULTIPLIER, MAX_BACKOFF_MS);
 }
@@ -54,6 +71,7 @@ function createConnection(url: string, set: StatusSetter): void {
 
   socket.onopen = () => {
     currentBackoff = INITIAL_BACKOFF_MS;
+    reconnectAttempts = 0;
     set({ connectionStatus: 'connected', error: null });
   };
 
@@ -62,11 +80,16 @@ function createConnection(url: string, set: StatusSetter): void {
       set({ connectionStatus: 'disconnected' });
       return;
     }
+    if (TERMINAL_CLOSE_CODES.has(event.code)) {
+      set({ connectionStatus: 'disconnected', error: `Connection rejected (code ${event.code})` });
+      return;
+    }
     scheduleReconnect(set);
   };
 
   socket.onerror = () => {
-    set({ connectionStatus: ws ? 'connected' : 'connecting', error: 'WebSocket connection error' });
+    const status = socket.readyState === WebSocket.OPEN ? 'connected' : 'connecting';
+    set({ connectionStatus: status, error: 'WebSocket connection error' });
   };
 
   socket.onmessage = dispatchMessage;
@@ -81,6 +104,7 @@ export function connect(url: string, set: StatusSetter): void {
   clearReconnectTimer();
 
   intentionalDisconnect = false;
+  reconnectAttempts = 0;
   currentUrl = url;
   set({ connectionStatus: 'connecting', error: null });
 
@@ -91,6 +115,7 @@ export function disconnect(set: StatusSetter): void {
   intentionalDisconnect = true;
   clearReconnectTimer();
   currentBackoff = INITIAL_BACKOFF_MS;
+  reconnectAttempts = 0;
   currentUrl = null;
 
   if (ws) {

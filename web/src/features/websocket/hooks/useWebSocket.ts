@@ -2,9 +2,19 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useWsStore } from '@/stores/wsStore';
 
-function getWsUrl(): string {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws`;
+function isLocalhost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
+export function getWsUrl(): string {
+  const { protocol, host, hostname } = window.location;
+  const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+
+  if (wsProtocol === 'ws:' && !isLocalhost(hostname)) {
+    throw new Error('Insecure WebSocket (ws://) is not allowed for non-localhost hosts');
+  }
+
+  return `${wsProtocol}//${host}/ws`;
 }
 
 interface UseWebSocketReturn {
@@ -22,8 +32,6 @@ export function useWebSocket(): UseWebSocketReturn {
   useEffect(() => {
     if (isAuthenticated) {
       connect(getWsUrl());
-    } else {
-      disconnect();
     }
 
     return () => {

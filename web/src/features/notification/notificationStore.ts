@@ -14,16 +14,25 @@ interface NotificationActions {
 
 type NotificationStore = NotificationState & NotificationActions;
 
+const MAX_NOTIFICATIONS = 100;
+
 export const useNotificationStore = create<NotificationStore>()((set) => ({
   notifications: [],
   unreadCount: 0,
 
   onNotification: (notification: Notification) => {
-    set((state) => ({
-      notifications: [...state.notifications, notification],
-      unreadCount: notification.read
-        ? state.unreadCount
-        : state.unreadCount + 1,
-    }));
+    set((state) => {
+      const updated = [...state.notifications, notification];
+      const capped = updated.length > MAX_NOTIFICATIONS
+        ? updated.slice(updated.length - MAX_NOTIFICATIONS)
+        : updated;
+
+      return {
+        notifications: capped,
+        unreadCount: notification.read
+          ? state.unreadCount
+          : state.unreadCount + 1,
+      };
+    });
   },
 }));
