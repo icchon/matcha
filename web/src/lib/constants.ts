@@ -25,6 +25,7 @@ export const API_PATHS = {
   },
   TAGS: '/tags/',
   PROFILE: {
+    MY_PROFILE: '/me/profile/',
     CREATE: '/me/profile/',
     UPDATE: '/me/profile/',
     PICTURES: '/me/profile/pictures',
@@ -43,3 +44,5 @@ export const API_PATHS = {
     LIST: '/me/notifications',
   },
 } as const;
+
+export const MAX_PICTURES = 5;
