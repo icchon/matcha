@@ -33,7 +33,7 @@ func (s *notificationService) GetNotifications(ctx context.Context, recipientID 
 	})
 }
 
-func (s *notificationService) CreateAndSendNotofication(ctx context.Context, senderID uuid.UUID, recipiendID uuid.UUID, notifType entity.NotificationType) (*entity.Notification, error) {
+func (s *notificationService) CreateAndSendNotification(ctx context.Context, senderID uuid.UUID, recipiendID uuid.UUID, notifType entity.NotificationType) (*entity.Notification, error) {
 	notification := &entity.Notification{
 		RecipientID: recipiendID,
 		SenderID:    sql.NullString{String: senderID.String(), Valid: true},
