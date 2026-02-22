@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/icchon/matcha/api/internal/domain/repo" // Add this import
+	"github.com/icchon/matcha/api/internal/domain/repo"
 )
 
 func TestUnitOfWork_Do(t *testing.T) {
@@ -54,7 +54,8 @@ func TestUnitOfWork_Do(t *testing.T) {
 		err := uow.Do(context.Background(), func(rm repo.RepositoryManager) error {
 			return testErr
 		})
-		assert.Equal(t, rollbackErr, err) // Should return the rollback error
+		assert.True(t, errors.Is(err, testErr), "joined error should contain the original function error")
+		assert.True(t, errors.Is(err, rollbackErr), "joined error should contain the rollback error")
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
