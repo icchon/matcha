@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 
 interface ActionButtonsProps {
-  readonly userId: string;
   readonly isLiked: boolean;
   readonly isBlocked: boolean;
   readonly isLoading?: boolean;
@@ -74,10 +73,13 @@ const ActionButtons: FC<ActionButtonsProps> = ({
           </Button>
         )}
 
+        {/* TODO(BE-XX #25): Enable report button when backend endpoint is implemented */}
+        {/* TODO(FE-XX): Add report reason selection UI (dropdown/radio) before submitting */}
         <Button
           type="button"
           onClick={() => setConfirmAction('report')}
-          disabled={isLoading}
+          disabled={true}
+          title="Coming soon"
         >
           Report
         </Button>

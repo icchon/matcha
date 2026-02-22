@@ -16,7 +16,7 @@ beforeEach(() => {
   vi.mocked(usersApi.unlikeUser).mockResolvedValue(undefined);
   vi.mocked(usersApi.blockUser).mockResolvedValue(undefined);
   vi.mocked(usersApi.unblockUser).mockResolvedValue(undefined);
-  vi.mocked(usersApi.reportUser).mockResolvedValue({ message: 'Report submitted' });
+  vi.mocked(usersApi.reportUser).mockRejectedValue(new Error('Report feature is not yet available'));
 });
 
 describe('useProfileActions', () => {
@@ -84,7 +84,8 @@ describe('useProfileActions', () => {
     expect(result.current.isBlocked).toBe(false);
   });
 
-  it('calls reportUser API on handleReport', async () => {
+  it('calls reportUser API on handleReport and shows error toast', async () => {
+    const { toast } = await import('sonner');
     const { result } = renderHook(() => useProfileActions(USER_ID));
 
     await act(async () => {
@@ -95,6 +96,42 @@ describe('useProfileActions', () => {
       usersApi.reportUser,
       'Should call reportUser with userId and reason.',
     ).toHaveBeenCalledWith(USER_ID, 'inappropriate');
+    expect(
+      toast.error,
+      'Should show error toast since report is not yet available.',
+    ).toHaveBeenCalledWith('Report feature is not yet available');
+  });
+
+  it('shows generic error for 5xx errors', async () => {
+    const serverError = Object.assign(new Error('Internal Server Error'), { status: 500 });
+    vi.mocked(usersApi.likeUser).mockRejectedValue(serverError);
+    const { toast } = await import('sonner');
+    const { result } = renderHook(() => useProfileActions(USER_ID));
+
+    await act(async () => {
+      await result.current.handleLike();
+    });
+
+    expect(
+      toast.error,
+      'Should show generic message for 5xx errors to avoid leaking server details.',
+    ).toHaveBeenCalledWith('Something went wrong. Please try again later.');
+  });
+
+  it('shows API error message for 4xx errors', async () => {
+    const clientError = Object.assign(new Error('User not found'), { status: 404 });
+    vi.mocked(usersApi.likeUser).mockRejectedValue(clientError);
+    const { toast } = await import('sonner');
+    const { result } = renderHook(() => useProfileActions(USER_ID));
+
+    await act(async () => {
+      await result.current.handleLike();
+    });
+
+    expect(
+      toast.error,
+      'Should show API error message for 4xx errors.',
+    ).toHaveBeenCalledWith('User not found');
   });
 
   it('does not call API when userId is undefined', async () => {

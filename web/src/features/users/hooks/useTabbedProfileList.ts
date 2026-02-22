@@ -40,6 +40,8 @@ export function useTabbedProfileList<T, TTab extends string>(
       const theirIds = config.extractTheirIds(theirList);
       const allIds = [...new Set([...myIds, ...theirIds])];
 
+      // TODO(BE-XX): Replace N+1 getUserProfile calls with a bulk-fetch endpoint
+      // (e.g., GET /users/profiles?ids=id1,id2,...) to avoid per-user requests
       const profiles = await Promise.all(
         allIds.map((id) => usersApi.getUserProfile(id).catch(() => null)),
       );

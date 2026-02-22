@@ -2,6 +2,22 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import * as usersApi from '@/api/users';
 
+interface ApiError {
+  readonly status?: number;
+  readonly message?: string;
+}
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) {
+    const apiErr = err as Error & ApiError;
+    if (typeof apiErr.status === 'number' && apiErr.status >= 500) {
+      return 'Something went wrong. Please try again later.';
+    }
+    return apiErr.message;
+  }
+  return fallback;
+}
+
 interface UseProfileActionsResult {
   readonly isLiked: boolean;
   readonly isBlocked: boolean;
@@ -29,8 +45,7 @@ export function useProfileActions(userId: string | undefined): UseProfileActions
         toast.success("It's a match!");
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to like user';
-      toast.error(message);
+      toast.error(getErrorMessage(err, 'Failed to like user'));
     } finally {
       setActionLoading(false);
     }
@@ -43,8 +58,7 @@ export function useProfileActions(userId: string | undefined): UseProfileActions
       await usersApi.unlikeUser(userId);
       setIsLiked(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unlike user';
-      toast.error(message);
+      toast.error(getErrorMessage(err, 'Failed to unlike user'));
     } finally {
       setActionLoading(false);
     }
@@ -58,8 +72,7 @@ export function useProfileActions(userId: string | undefined): UseProfileActions
       setIsBlocked(true);
       toast.success('User blocked');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to block user';
-      toast.error(message);
+      toast.error(getErrorMessage(err, 'Failed to block user'));
     } finally {
       setActionLoading(false);
     }
@@ -73,8 +86,7 @@ export function useProfileActions(userId: string | undefined): UseProfileActions
       setIsBlocked(false);
       toast.success('User unblocked');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to unblock user';
-      toast.error(message);
+      toast.error(getErrorMessage(err, 'Failed to unblock user'));
     } finally {
       setActionLoading(false);
     }
@@ -87,8 +99,7 @@ export function useProfileActions(userId: string | undefined): UseProfileActions
       await usersApi.reportUser(userId, 'inappropriate');
       toast.success('Report submitted');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to report user';
-      toast.error(message);
+      toast.error(getErrorMessage(err, 'Failed to report user'));
     } finally {
       setActionLoading(false);
     }

@@ -16,7 +16,9 @@ function validateUserId(userId: string): string {
 function isSafeImageUrl(url: string): boolean {
   try {
     const parsed = new URL(url, window.location.origin);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.pathname.startsWith('/');
+    if (parsed.protocol === 'https:') return true;
+    if (parsed.origin === window.location.origin) return true;
+    return false;
   } catch {
     return false;
   }
@@ -91,10 +93,10 @@ export async function unblockUser(userId: string): Promise<void> {
   await apiClient.delete(API_PATHS.USERS.UNBLOCK(validateUserId(userId)));
 }
 
-// [MOCK] BE-08 #25: endpoint not yet implemented
+// TODO(BE-XX #25): Replace mock with real endpoint when BE-08 is implemented
 // TODO(FE-XX): Add report reason selection UI before BE-08 #25 is implemented
 export async function reportUser(_userId: string, _reason: string): Promise<MessageResponse> {
-  return { message: 'Report submitted' };
+  throw new Error('Report feature is not yet available');
 }
 
 export async function getLikedUsers(): Promise<readonly Like[]> {

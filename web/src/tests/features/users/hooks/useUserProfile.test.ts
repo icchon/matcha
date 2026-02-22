@@ -72,8 +72,15 @@ describe('useUserProfile', () => {
     expect(result.current.profile).toBeNull();
   });
 
-  it('does not fetch when userId is undefined', () => {
-    renderHook(() => useUserProfile(undefined));
+  it('does not fetch when userId is undefined and sets isLoading to false', async () => {
+    const { result } = renderHook(() => useUserProfile(undefined));
+
+    await waitFor(() => {
+      expect(
+        result.current.isLoading,
+        'isLoading should be false when userId is undefined to avoid stuck loading state.',
+      ).toBe(false);
+    });
 
     expect(
       usersApi.getUserProfile,

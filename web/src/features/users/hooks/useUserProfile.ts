@@ -14,7 +14,10 @@ export function useUserProfile(userId: string | undefined): UseUserProfileResult
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setIsLoading(true);

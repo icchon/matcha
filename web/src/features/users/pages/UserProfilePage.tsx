@@ -6,11 +6,14 @@ import { OnlineIndicator } from '@/features/users/components/OnlineIndicator';
 import { ActionButtons } from '@/features/users/components/ActionButtons';
 import { useUserProfile } from '@/features/users/hooks/useUserProfile';
 import { useProfileActions } from '@/features/users/hooks/useProfileActions';
+import { useAuthStore } from '@/stores/authStore';
 
 const UserProfilePage: FC = () => {
   const { userId } = useParams<{ userId: string }>();
+  const currentUserId = useAuthStore((s) => s.userId);
   const { profile, isLoading, error } = useUserProfile(userId);
   const actions = useProfileActions(userId);
+  const isOwnProfile = profile !== null && profile.userId === currentUserId;
 
   if (isLoading) {
     return (
@@ -84,17 +87,18 @@ const UserProfilePage: FC = () => {
         )}
       </div>
 
-      <ActionButtons
-        userId={profile.userId}
-        isLiked={actions.isLiked}
-        isBlocked={actions.isBlocked}
-        isLoading={actions.actionLoading}
-        onLike={actions.handleLike}
-        onUnlike={actions.handleUnlike}
-        onBlock={actions.handleBlock}
-        onUnblock={actions.handleUnblock}
-        onReport={actions.handleReport}
-      />
+      {!isOwnProfile && (
+        <ActionButtons
+          isLiked={actions.isLiked}
+          isBlocked={actions.isBlocked}
+          isLoading={actions.actionLoading}
+          onLike={actions.handleLike}
+          onUnlike={actions.handleUnlike}
+          onBlock={actions.handleBlock}
+          onUnblock={actions.handleUnblock}
+          onReport={actions.handleReport}
+        />
+      )}
     </div>
   );
 };

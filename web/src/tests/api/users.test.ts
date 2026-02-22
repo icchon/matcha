@@ -115,6 +115,40 @@ describe('getUserProfile', () => {
       getUserProfile('invalid-id'),
     ).rejects.toThrow('Invalid user ID format');
   });
+
+  it('strips http: picture URLs for security (only allows https: and same-origin)', async () => {
+    const profileWithHttpPic = {
+      ...rawProfile,
+      pictures: [
+        { id: 1, user_id: UUID_1, url: 'http://evil.com/pic.jpg', is_profile_pic: true, created_at: '2024-01-01' },
+      ],
+    };
+    mockGet.mockResolvedValue(profileWithHttpPic);
+
+    const result = await getUserProfile(UUID_1);
+
+    expect(
+      result.pictures[0].url,
+      'http: URLs from external origins should be stripped. Only https: and same-origin allowed.',
+    ).toBe('');
+  });
+
+  it('allows https: picture URLs', async () => {
+    const profileWithHttpsPic = {
+      ...rawProfile,
+      pictures: [
+        { id: 1, user_id: UUID_1, url: 'https://cdn.example.com/pic.jpg', is_profile_pic: true, created_at: '2024-01-01' },
+      ],
+    };
+    mockGet.mockResolvedValue(profileWithHttpsPic);
+
+    const result = await getUserProfile(UUID_1);
+
+    expect(
+      result.pictures[0].url,
+      'https: URLs should be allowed.',
+    ).toBe('https://cdn.example.com/pic.jpg');
+  });
 });
 
 describe('likeUser', () => {
@@ -171,13 +205,10 @@ describe('unblockUser', () => {
 });
 
 describe('reportUser', () => {
-  it('[MOCK] returns success stub', async () => {
-    const result = await reportUser(UUID_4, 'spam');
-
-    expect(
-      result,
-      '[MOCK] reportUser should return { message } stub. BE-08 #25: endpoint not yet implemented.',
-    ).toEqual({ message: 'Report submitted' });
+  it('[MOCK] throws "Report feature is not yet available" error', async () => {
+    await expect(
+      reportUser(UUID_4, 'spam'),
+    ).rejects.toThrow('Report feature is not yet available');
   });
 });
 

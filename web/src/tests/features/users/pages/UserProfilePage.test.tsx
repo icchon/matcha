@@ -7,6 +7,11 @@ import * as usersApi from '@/api/users';
 import type { UserProfileDetail } from '@/types';
 
 vi.mock('@/api/users');
+import { useAuthStore } from '@/stores/authStore';
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: vi.fn(),
+}));
 
 const mockProfile: UserProfileDetail = {
   userId: '00000000-0000-0000-0000-000000000001',
@@ -43,14 +48,20 @@ function renderPage(userId = '00000000-0000-0000-0000-000000000001') {
   );
 }
 
+const CURRENT_USER_ID = '00000000-0000-0000-0000-000000000099';
+
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(useAuthStore).mockImplementation(
+    (selector: (s: { userId: string | null }) => unknown) =>
+      selector({ userId: CURRENT_USER_ID }) as ReturnType<typeof useAuthStore>,
+  );
   vi.mocked(usersApi.getUserProfile).mockResolvedValue(mockProfile);
   vi.mocked(usersApi.likeUser).mockResolvedValue({ matched: false });
   vi.mocked(usersApi.unlikeUser).mockResolvedValue(undefined);
   vi.mocked(usersApi.blockUser).mockResolvedValue(undefined);
   vi.mocked(usersApi.unblockUser).mockResolvedValue(undefined);
-  vi.mocked(usersApi.reportUser).mockResolvedValue({ message: 'Report submitted' });
+  vi.mocked(usersApi.reportUser).mockRejectedValue(new Error('Report feature is not yet available'));
 });
 
 describe('UserProfilePage', () => {
@@ -151,5 +162,24 @@ describe('UserProfilePage', () => {
     });
 
     expect(screen.getByText(/75/)).toBeInTheDocument();
+  });
+
+  it('hides action buttons when viewing own profile', async () => {
+    const ownProfile: UserProfileDetail = {
+      ...mockProfile,
+      userId: CURRENT_USER_ID,
+    };
+    vi.mocked(usersApi.getUserProfile).mockResolvedValue(ownProfile);
+    renderPage(CURRENT_USER_ID);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /like/i }),
+      'Should hide action buttons on own profile to prevent self-interaction.',
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /block/i })).not.toBeInTheDocument();
   });
 });

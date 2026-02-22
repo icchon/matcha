@@ -5,7 +5,6 @@ import { ActionButtons } from '@/features/users/components/ActionButtons';
 
 describe('ActionButtons', () => {
   const defaultProps = {
-    userId: 'user-1',
     isLiked: false,
     isBlocked: false,
     onLike: vi.fn(),
@@ -119,39 +118,15 @@ describe('ActionButtons', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('renders Report button', () => {
+  it('renders Report button as disabled with Coming soon tooltip', () => {
     render(<ActionButtons {...defaultProps} />);
 
+    const reportBtn = screen.getByRole('button', { name: /report/i });
     expect(
-      screen.getByRole('button', { name: /report/i }),
-      'Should show Report button.',
-    ).toBeInTheDocument();
-  });
-
-  it('shows confirmation modal before reporting', async () => {
-    const user = userEvent.setup();
-    render(<ActionButtons {...defaultProps} />);
-
-    await user.click(screen.getByRole('button', { name: /report/i }));
-
-    const dialog = screen.getByRole('dialog');
-    expect(
-      dialog,
-      'Should show a confirmation modal when Report is clicked.',
-    ).toBeInTheDocument();
-  });
-
-  it('calls onReport when report is confirmed', async () => {
-    const user = userEvent.setup();
-    render(<ActionButtons {...defaultProps} />);
-
-    await user.click(screen.getByRole('button', { name: /report/i }));
-    await user.click(screen.getByRole('button', { name: /confirm/i }));
-
-    expect(
-      defaultProps.onReport,
-      'onReport should be called after confirming the report modal.',
-    ).toHaveBeenCalled();
+      reportBtn,
+      'Report button should be disabled until backend is implemented (BE-XX #25).',
+    ).toBeDisabled();
+    expect(reportBtn).toHaveAttribute('title', 'Coming soon');
   });
 
   it('disables buttons when isLoading is true', () => {
