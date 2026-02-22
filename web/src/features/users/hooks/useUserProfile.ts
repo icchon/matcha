@@ -22,6 +22,7 @@ export function useUserProfile(userId: string | undefined): UseUserProfileResult
     let cancelled = false;
     setIsLoading(true);
     setError(null);
+    setProfile(null);  // prevent stale profile flash
 
     usersApi.getUserProfile(userId).then((data) => {
       if (!cancelled) {

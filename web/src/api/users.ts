@@ -14,6 +14,7 @@ function validateUserId(userId: string): string {
 }
 
 function isSafeImageUrl(url: string): boolean {
+  if (url.startsWith('//')) return false;
   try {
     const parsed = new URL(url, window.location.origin);
     if (parsed.protocol === 'https:') return true;

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import * as usersApi from '@/api/users';
+import { getErrorMessage } from '@/features/users/utils/errorHelpers';
 import type { UserProfileDetail } from '@/types';
 
 interface TabbedListConfig<T> {
@@ -58,8 +59,7 @@ export function useTabbedProfileList<T, TTab extends string>(
         theirIds.map((id) => profileMap.get(id)).filter(Boolean) as UserProfileDetail[],
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : config.errorMessage;
-      toast.error(message);
+      toast.error(getErrorMessage(err, config.errorMessage));
     } finally {
       setIsLoading(false);
     }

@@ -98,6 +98,42 @@ describe('useTabbedProfileList', () => {
     expect(result.current.theirProfiles[0].firstName).toBe('Carol');
   });
 
+  it('shows generic error for 5xx errors instead of leaking server details', async () => {
+    const serverError = Object.assign(new Error('Internal Server Error'), { status: 500 });
+    defaultConfig.fetchMyList.mockRejectedValue(serverError);
+    const { toast } = await import('sonner');
+    const { result } = renderHook(() =>
+      useTabbedProfileList<MockItem, string>(defaultConfig, 'tab1'),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(
+      toast.error,
+      'Should show generic message for 5xx errors via shared getErrorMessage. Check useTabbedProfileList error handling.',
+    ).toHaveBeenCalledWith('Something went wrong. Please try again later.');
+  });
+
+  it('shows authorization error for 401/403 errors', async () => {
+    const authError = Object.assign(new Error('Unauthorized'), { status: 401 });
+    defaultConfig.fetchMyList.mockRejectedValue(authError);
+    const { toast } = await import('sonner');
+    const { result } = renderHook(() =>
+      useTabbedProfileList<MockItem, string>(defaultConfig, 'tab1'),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(
+      toast.error,
+      'Should show authorization error for 401 via shared getErrorMessage.',
+    ).toHaveBeenCalledWith('You are not authorized to perform this action.');
+  });
+
   it('allows switching active tab', async () => {
     const { result } = renderHook(() =>
       useTabbedProfileList<MockItem, string>(defaultConfig, 'tab1'),

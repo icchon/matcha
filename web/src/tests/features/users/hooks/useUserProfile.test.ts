@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useUserProfile } from '@/features/users/hooks/useUserProfile';
 import * as usersApi from '@/api/users';
 import type { UserProfileDetail } from '@/types';
@@ -70,6 +70,51 @@ describe('useUserProfile', () => {
       'Should capture error message from rejected promise.',
     ).toBe('Not found');
     expect(result.current.profile).toBeNull();
+  });
+
+  it('resets profile to null when userId changes to prevent stale data flash', async () => {
+    const secondProfile: UserProfileDetail = {
+      ...mockProfile,
+      userId: '00000000-0000-0000-0000-000000000002',
+      firstName: 'Bob',
+    };
+
+    vi.mocked(usersApi.getUserProfile).mockResolvedValue(mockProfile);
+    const { result, rerender } = renderHook(
+      ({ userId }: { userId: string }) => useUserProfile(userId),
+      { initialProps: { userId: '00000000-0000-0000-0000-000000000001' } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.profile?.firstName).toBe('Alice');
+
+    // Simulate slow second fetch so we can observe the null reset
+    let resolveSecond: (value: UserProfileDetail) => void;
+    vi.mocked(usersApi.getUserProfile).mockReturnValue(
+      new Promise((resolve) => { resolveSecond = resolve; }),
+    );
+
+    rerender({ userId: '00000000-0000-0000-0000-000000000002' });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(true);
+    });
+    expect(
+      result.current.profile,
+      'Profile should be null during userId change to prevent stale data flash. Check setProfile(null) in useEffect.',
+    ).toBeNull();
+
+    // Resolve the second fetch
+    await act(async () => {
+      resolveSecond!(secondProfile);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.profile?.firstName).toBe('Bob');
   });
 
   it('does not fetch when userId is undefined and sets isLoading to false', async () => {

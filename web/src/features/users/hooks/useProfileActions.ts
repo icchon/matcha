@@ -1,22 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import * as usersApi from '@/api/users';
-
-interface ApiError {
-  readonly status?: number;
-  readonly message?: string;
-}
-
-function getErrorMessage(err: unknown, fallback: string): string {
-  if (err instanceof Error) {
-    const apiErr = err as Error & ApiError;
-    if (typeof apiErr.status === 'number' && apiErr.status >= 500) {
-      return 'Something went wrong. Please try again later.';
-    }
-    return apiErr.message;
-  }
-  return fallback;
-}
+import { getErrorMessage } from '@/features/users/utils/errorHelpers';
 
 interface UseProfileActionsResult {
   readonly isLiked: boolean;

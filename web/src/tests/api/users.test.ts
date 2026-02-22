@@ -133,6 +133,23 @@ describe('getUserProfile', () => {
     ).toBe('');
   });
 
+  it('strips protocol-relative (//evil.com) picture URLs', async () => {
+    const profileWithProtocolRelativePic = {
+      ...rawProfile,
+      pictures: [
+        { id: 1, user_id: UUID_1, url: '//evil.com/pic.jpg', is_profile_pic: true, created_at: '2024-01-01' },
+      ],
+    };
+    mockGet.mockResolvedValue(profileWithProtocolRelativePic);
+
+    const result = await getUserProfile(UUID_1);
+
+    expect(
+      result.pictures[0].url,
+      'Protocol-relative URLs (//evil.com) should be rejected to prevent URL bypass. Check isSafeImageUrl guard.',
+    ).toBe('');
+  });
+
   it('allows https: picture URLs', async () => {
     const profileWithHttpsPic = {
       ...rawProfile,

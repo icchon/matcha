@@ -118,6 +118,38 @@ describe('useProfileActions', () => {
     ).toHaveBeenCalledWith('Something went wrong. Please try again later.');
   });
 
+  it('shows authorization error for 401 errors', async () => {
+    const authError = Object.assign(new Error('Unauthorized'), { status: 401 });
+    vi.mocked(usersApi.likeUser).mockRejectedValue(authError);
+    const { toast } = await import('sonner');
+    const { result } = renderHook(() => useProfileActions(USER_ID));
+
+    await act(async () => {
+      await result.current.handleLike();
+    });
+
+    expect(
+      toast.error,
+      'Should show authorization error for 401 status. Check getErrorMessage handles 401/403.',
+    ).toHaveBeenCalledWith('You are not authorized to perform this action.');
+  });
+
+  it('shows authorization error for 403 errors', async () => {
+    const forbiddenError = Object.assign(new Error('Forbidden'), { status: 403 });
+    vi.mocked(usersApi.likeUser).mockRejectedValue(forbiddenError);
+    const { toast } = await import('sonner');
+    const { result } = renderHook(() => useProfileActions(USER_ID));
+
+    await act(async () => {
+      await result.current.handleLike();
+    });
+
+    expect(
+      toast.error,
+      'Should show authorization error for 403 status. Check getErrorMessage handles 401/403.',
+    ).toHaveBeenCalledWith('You are not authorized to perform this action.');
+  });
+
   it('shows API error message for 4xx errors', async () => {
     const clientError = Object.assign(new Error('User not found'), { status: 404 });
     vi.mocked(usersApi.likeUser).mockRejectedValue(clientError);
