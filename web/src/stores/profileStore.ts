@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { UserProfile } from '@/types';
-import type { CreateProfileRequest, UpdateProfileRequest } from '@/api/profile';
+import type { CreateProfileRequest } from '@/api/profile';
 import * as profileApi from '@/api/profile';
 
 interface ProfileState {
@@ -11,7 +11,8 @@ interface ProfileState {
 
 interface ProfileActions {
   readonly fetchProfile: () => Promise<void>;
-  readonly saveProfile: (params: CreateProfileRequest | UpdateProfileRequest) => Promise<void>;
+  readonly createProfile: (params: CreateProfileRequest) => Promise<void>;
+  readonly updateProfile: (params: Parameters<typeof profileApi.updateProfile>[0]) => Promise<void>;
   readonly clearError: () => void;
 }
 
@@ -37,16 +38,24 @@ export const useProfileStore = create<ProfileStore>()((set, get) => ({
     }
   },
 
-  saveProfile: async (params) => {
+  createProfile: async (params) => {
     set({ isLoading: true, error: null });
     try {
-      const { profile: existing } = get();
-      const profile = existing
-        ? await profileApi.updateProfile(params)
-        : await profileApi.createProfile(params as CreateProfileRequest);
+      const profile = await profileApi.createProfile(params);
       set({ profile, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile';
+      const message = err instanceof Error ? err.message : 'Failed to create profile';
+      set({ error: message, isLoading: false });
+    }
+  },
+
+  updateProfile: async (params) => {
+    set({ isLoading: true, error: null });
+    try {
+      const profile = await profileApi.updateProfile(params);
+      set({ profile, isLoading: false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile';
       set({ error: message, isLoading: false });
     }
   },

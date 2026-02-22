@@ -11,7 +11,7 @@ vi.mock('@/stores/profileStore');
 vi.mock('@/stores/pictureStore');
 vi.mock('@/stores/tagStore');
 
-const mockSaveProfile = vi.fn();
+const mockCreateProfile = vi.fn();
 const mockFetchTags = vi.fn();
 const mockUploadPicture = vi.fn();
 const mockDeletePicture = vi.fn();
@@ -23,7 +23,7 @@ function setupMockStores(overrides: Record<string, unknown> = {}) {
     profile: null,
     isLoading: false,
     error: null,
-    saveProfile: mockSaveProfile,
+    createProfile: mockCreateProfile,
     fetchProfile: vi.fn(),
     clearError: vi.fn(),
     ...('error' in overrides ? { error: overrides.error } : {}),
@@ -121,7 +121,7 @@ describe('ProfileCreatePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('calls saveProfile when form is submitted', async () => {
+  it('calls createProfile when form is submitted', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -136,8 +136,8 @@ describe('ProfileCreatePage', () => {
 
     await waitFor(() => {
       expect(
-        mockSaveProfile,
-        'Submitting the form should call saveProfile from the store.',
+        mockCreateProfile,
+        'Submitting the form should call createProfile from the store.',
       ).toHaveBeenCalled();
     });
   });

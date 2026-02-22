@@ -12,7 +12,7 @@ const EditProfilePage: FC = () => {
   const profile = useProfileStore((s) => s.profile);
   const isProfileLoading = useProfileStore((s) => s.isLoading);
   const profileError = useProfileStore((s) => s.error);
-  const saveProfile = useProfileStore((s) => s.saveProfile);
+  const updateProfile = useProfileStore((s) => s.updateProfile);
   const fetchProfile = useProfileStore((s) => s.fetchProfile);
 
   const pictures = usePictureStore((s) => s.pictures);
@@ -35,7 +35,7 @@ const EditProfilePage: FC = () => {
   }, [fetchProfile, fetchTags]);
 
   const handleSubmit = (data: ProfileFormData) => {
-    saveProfile({
+    updateProfile({
       firstName: data.firstName,
       lastName: data.lastName,
       username: data.username,
@@ -47,7 +47,7 @@ const EditProfilePage: FC = () => {
     });
   };
 
-  const error = profileError ?? pictureError ?? tagError;
+  const errors = [profileError, pictureError, tagError].filter(Boolean);
 
   if (isProfileLoading && !profile) {
     return (
@@ -61,9 +61,13 @@ const EditProfilePage: FC = () => {
     <div className="mx-auto max-w-2xl space-y-8 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Edit Profile</h1>
 
-      {error ? (
+      {errors.length > 0 ? (
         <div role="alert" className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-          {error}
+          {errors.length === 1 ? errors[0] : (
+            <ul className="list-disc pl-4">
+              {errors.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          )}
         </div>
       ) : null}
 
@@ -83,15 +87,15 @@ const EditProfilePage: FC = () => {
       />
 
       <PhotoUploader
-        pictures={[...pictures]}
+        pictures={pictures}
         onUpload={uploadPicture}
         onDelete={deletePicture}
         isLoading={isPicturesLoading}
       />
 
       <TagManager
-        tags={[...tags]}
-        allTags={[...allTags]}
+        tags={tags}
+        allTags={allTags}
         onAdd={addTag}
         onRemove={removeTag}
         isLoading={isTagsLoading}

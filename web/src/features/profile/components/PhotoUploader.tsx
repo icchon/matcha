@@ -1,4 +1,4 @@
-import { useCallback, useRef, type FC, type ChangeEvent, type DragEvent } from 'react';
+import { useCallback, useRef, type FC, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import type { Picture } from '@/types';
@@ -78,6 +78,13 @@ const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, i
     setIsDragging(false);
   }, []);
 
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInputRef.current?.click();
+    }
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -86,11 +93,11 @@ const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, i
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {pictures.map((picture) => (
+        {pictures.map((picture, index) => (
           <div key={picture.id} className="group relative">
             <img
               src={picture.url}
-              alt={`Photo ${picture.id}`}
+              alt={`Profile photo ${index + 1}`}
               className="h-32 w-full rounded-lg object-cover"
             />
             <Button
@@ -113,9 +120,12 @@ const PhotoUploader: FC<PhotoUploaderProps> = ({ pictures, onUpload, onDelete, i
 
       {canUpload ? (
         <div
+          role="button"
+          tabIndex={0}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
+          onKeyDown={handleKeyDown}
           className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
             isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
           }`}

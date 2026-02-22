@@ -11,7 +11,7 @@ const ProfileCreatePage: FC = () => {
   const profile = useProfileStore((s) => s.profile);
   const isProfileLoading = useProfileStore((s) => s.isLoading);
   const profileError = useProfileStore((s) => s.error);
-  const saveProfile = useProfileStore((s) => s.saveProfile);
+  const createProfile = useProfileStore((s) => s.createProfile);
 
   const pictures = usePictureStore((s) => s.pictures);
   const isPicturesLoading = usePictureStore((s) => s.isLoading);
@@ -32,7 +32,7 @@ const ProfileCreatePage: FC = () => {
   }, [fetchTags]);
 
   const handleSubmit = (data: ProfileFormData) => {
-    saveProfile({
+    createProfile({
       firstName: data.firstName,
       lastName: data.lastName,
       username: data.username,
@@ -44,15 +44,19 @@ const ProfileCreatePage: FC = () => {
     });
   };
 
-  const error = profileError ?? pictureError ?? tagError;
+  const errors = [profileError, pictureError, tagError].filter(Boolean);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Create Profile</h1>
 
-      {error ? (
+      {errors.length > 0 ? (
         <div role="alert" className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-          {error}
+          {errors.length === 1 ? errors[0] : (
+            <ul className="list-disc pl-4">
+              {errors.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          )}
         </div>
       ) : null}
 
@@ -63,15 +67,15 @@ const ProfileCreatePage: FC = () => {
       />
 
       <PhotoUploader
-        pictures={[...pictures]}
+        pictures={pictures}
         onUpload={uploadPicture}
         onDelete={deletePicture}
         isLoading={isPicturesLoading}
       />
 
       <TagManager
-        tags={[...tags]}
-        allTags={[...allTags]}
+        tags={tags}
+        allTags={allTags}
         onAdd={addTag}
         onRemove={removeTag}
         isLoading={isTagsLoading}

@@ -4,7 +4,7 @@ import type { Picture } from '@/types';
 
 export async function uploadPicture(file: File): Promise<Picture> {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('image', file);
   return apiClient.upload<Picture>(API_PATHS.PROFILE.PICTURES, formData);
 }
 

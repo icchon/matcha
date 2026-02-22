@@ -25,6 +25,7 @@ export const API_PATHS = {
   },
   TAGS: '/tags/',
   PROFILE: {
+    MY_PROFILE: '/me/profile/',
     CREATE: '/me/profile/',
     UPDATE: '/me/profile/',
     PICTURES: '/me/profile/pictures',

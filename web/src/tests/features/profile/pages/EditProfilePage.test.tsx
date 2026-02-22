@@ -25,7 +25,7 @@ const sampleProfile: UserProfile = {
   fameRating: 42,
 };
 
-const mockSaveProfile = vi.fn();
+const mockUpdateProfile = vi.fn();
 const mockFetchProfile = vi.fn();
 const mockFetchTags = vi.fn();
 const mockUploadPicture = vi.fn();
@@ -38,7 +38,7 @@ function setupMockStores(overrides: Record<string, unknown> = {}) {
     profile: sampleProfile,
     isLoading: false,
     error: null,
-    saveProfile: mockSaveProfile,
+    updateProfile: mockUpdateProfile,
     fetchProfile: mockFetchProfile,
     clearError: vi.fn(),
     ...('profile' in overrides || 'isLoading' in overrides || 'error' in overrides

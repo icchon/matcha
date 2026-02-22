@@ -1,7 +1,6 @@
 import { apiClient } from '@/api/client';
 import { API_PATHS } from '@/lib/constants';
-import type { UserProfile } from '@/types';
-import type { Gender, SexualPreference } from '@/types';
+import type { UserProfile, Gender, SexualPreference } from '@/types';
 
 export interface CreateProfileRequest {
   readonly firstName: string;
@@ -35,5 +34,5 @@ export async function updateProfile(params: UpdateProfileRequest): Promise<UserP
 }
 
 export async function getMyProfile(): Promise<UserProfile> {
-  return apiClient.get<UserProfile>(API_PATHS.PROFILE.CREATE);
+  return apiClient.get<UserProfile>(API_PATHS.PROFILE.MY_PROFILE);
 }

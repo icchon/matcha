@@ -93,11 +93,11 @@ describe('fetchProfile', () => {
   });
 });
 
-describe('saveProfile (create)', () => {
-  it('creates a new profile when no profile exists', async () => {
+describe('createProfile', () => {
+  it('creates a new profile', async () => {
     mockCreateProfile.mockResolvedValue(sampleProfile);
 
-    await useProfileStore.getState().saveProfile({
+    await useProfileStore.getState().createProfile({
       firstName: 'John',
       lastName: 'Doe',
       username: 'johndoe',
@@ -110,27 +110,46 @@ describe('saveProfile (create)', () => {
     const state = useProfileStore.getState();
     expect(
       mockCreateProfile,
-      'saveProfile should call createProfile when no existing profile.',
+      'createProfile should call profileApi.createProfile.',
     ).toHaveBeenCalled();
     expect(
       state.profile?.firstName,
       'Profile should be updated after successful create.',
     ).toBe('John');
   });
+
+  it('sets error on create failure', async () => {
+    mockCreateProfile.mockRejectedValue(new Error('Create failed'));
+
+    await useProfileStore.getState().createProfile({
+      firstName: 'John',
+      lastName: 'Doe',
+      username: 'johndoe',
+      gender: 'male',
+      sexualPreference: 'heterosexual',
+      birthday: '1995-06-15',
+      biography: 'Hello world',
+    });
+
+    const state = useProfileStore.getState();
+    expect(
+      state.error,
+      'error should contain the failure message.',
+    ).toBe('Create failed');
+  });
 });
 
-describe('saveProfile (update)', () => {
+describe('updateProfile', () => {
   it('updates an existing profile', async () => {
-    useProfileStore.setState({ profile: sampleProfile });
     const updatedProfile = { ...sampleProfile, biography: 'Updated bio' };
     mockUpdateProfile.mockResolvedValue(updatedProfile);
 
-    await useProfileStore.getState().saveProfile({ biography: 'Updated bio' });
+    await useProfileStore.getState().updateProfile({ biography: 'Updated bio' });
 
     const state = useProfileStore.getState();
     expect(
       mockUpdateProfile,
-      'saveProfile should call updateProfile when profile already exists.',
+      'updateProfile should call profileApi.updateProfile.',
     ).toHaveBeenCalled();
     expect(
       state.profile?.biography,
@@ -138,11 +157,10 @@ describe('saveProfile (update)', () => {
     ).toBe('Updated bio');
   });
 
-  it('sets error on save failure', async () => {
+  it('sets error on update failure', async () => {
     mockUpdateProfile.mockRejectedValue(new Error('Save failed'));
-    useProfileStore.setState({ profile: sampleProfile });
 
-    await useProfileStore.getState().saveProfile({ biography: 'New bio' });
+    await useProfileStore.getState().updateProfile({ biography: 'New bio' });
 
     const state = useProfileStore.getState();
     expect(
