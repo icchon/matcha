@@ -131,3 +131,15 @@ export function send(message: { readonly type: string; readonly payload: unknown
     ws.send(JSON.stringify(message));
   }
 }
+
+export function resetConnectionState(): void {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  clearReconnectTimer();
+  currentBackoff = INITIAL_BACKOFF_MS;
+  reconnectAttempts = 0;
+  intentionalDisconnect = false;
+  currentUrl = null;
+}

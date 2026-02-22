@@ -65,6 +65,30 @@ describe('chatStore', () => {
     ).not.toThrow();
   });
 
+  it('caps messages at 200 per conversation, dropping oldest', () => {
+    const senderId = 'user-a';
+    for (let i = 0; i < 201; i++) {
+      const message: ChatMessage = {
+        id: `msg-${i}`,
+        senderId,
+        receiverId: 'user-b',
+        content: `Message ${i}`,
+        timestamp: `2026-01-01T00:${String(i).padStart(2, '0')}:00Z`,
+      };
+      useChatStore.getState().onMessage(message);
+    }
+
+    const conv = useChatStore.getState().conversations.get(senderId);
+    expect(
+      conv?.messages.length,
+      'After adding 201 messages, only 200 should remain (MAX_MESSAGES_PER_CONVERSATION=200). Check the slicing logic in onMessage.',
+    ).toBe(200);
+    expect(
+      conv?.messages[0]?.id,
+      'The oldest message (msg-0) should have been dropped. The first remaining message should be msg-1. Check slice offset in onMessage.',
+    ).toBe('msg-1');
+  });
+
   it('maintains immutability when adding messages', () => {
     const message1: ChatMessage = {
       id: 'msg-1',

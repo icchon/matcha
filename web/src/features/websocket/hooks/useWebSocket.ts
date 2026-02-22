@@ -32,6 +32,8 @@ export function useWebSocket(): UseWebSocketReturn {
   useEffect(() => {
     if (isAuthenticated) {
       connect(getWsUrl());
+    } else {
+      disconnect();
     }
 
     return () => {

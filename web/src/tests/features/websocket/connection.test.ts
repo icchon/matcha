@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setTokens, clearTokens } from '@/api/client';
-import { buildWsUrl, connect, disconnect, send } from '@/features/websocket/connection';
+import { buildWsUrl, connect, disconnect, send, resetConnectionState } from '@/features/websocket/connection';
 import type { ConnectionStatus } from '@/features/websocket/types';
 
 // --- MockWebSocket ---
@@ -70,6 +70,7 @@ const OriginalWebSocket = globalThis.WebSocket;
 beforeEach(() => {
   mockInstances = [];
   (globalThis as unknown as Record<string, unknown>).WebSocket = MockWebSocket as unknown as typeof WebSocket;
+  resetConnectionState();
 });
 
 afterEach(() => {

@@ -190,12 +190,12 @@ describe('wsStore', () => {
       // Re-connect and send message — handler SHOULD still fire
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
-      latestMock().simulateMessage({ type: 'chat.message', payload: { text: 'hello' } });
+      latestMock().simulateMessage({ type: 'chat.message', payload: { id: '1', senderId: 'a', receiverId: 'b', content: 'hello', timestamp: '2026-01-01T00:00:00Z' } });
 
       expect(
         handler,
         'Handlers should persist after disconnect(). Only clearAllHandlers() removes them.',
-      ).toHaveBeenCalledWith({ text: 'hello' });
+      ).toHaveBeenCalledWith({ id: '1', senderId: 'a', receiverId: 'b', content: 'hello', timestamp: '2026-01-01T00:00:00Z' });
 
       // Cleanup
       clearAllHandlers();
@@ -437,13 +437,13 @@ describe('wsStore', () => {
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      const message = { type: 'chat.message', payload: { text: 'hello' } };
-      latestMock().simulateMessage(message);
+      const payload = { id: '1', senderId: 'a', receiverId: 'b', content: 'hello', timestamp: '2026-01-01T00:00:00Z' };
+      latestMock().simulateMessage({ type: 'chat.message', payload });
 
       expect(
         chatHandler,
         'Registered handler for "chat.message" should be called with payload. Check message routing in onmessage.',
-      ).toHaveBeenCalledWith(message.payload);
+      ).toHaveBeenCalledWith(payload);
     });
 
     it('supports multiple handlers for the SAME message type', () => {
@@ -456,16 +456,17 @@ describe('wsStore', () => {
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      latestMock().simulateMessage({ type: 'chat.message', payload: { text: 'hi' } });
+      const payload = { id: '1', senderId: 'a', receiverId: 'b', content: 'hi', timestamp: '2026-01-01T00:00:00Z' };
+      latestMock().simulateMessage({ type: 'chat.message', payload });
 
       expect(
         handler1,
         'First handler for "chat.message" should be called. Multiple handlers per type must be supported.',
-      ).toHaveBeenCalledWith({ text: 'hi' });
+      ).toHaveBeenCalledWith(payload);
       expect(
         handler2,
         'Second handler for "chat.message" should also be called. Handlers must not overwrite each other.',
-      ).toHaveBeenCalledWith({ text: 'hi' });
+      ).toHaveBeenCalledWith(payload);
     });
 
     it('supports multiple handlers for different message types', () => {
@@ -478,7 +479,8 @@ describe('wsStore', () => {
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      latestMock().simulateMessage({ type: 'notification', payload: { id: 1 } });
+      const notifPayload = { id: 'n1', type: 'like', message: 'Someone liked you', timestamp: '2026-01-01T00:00:00Z', read: false };
+      latestMock().simulateMessage({ type: 'notification', payload: notifPayload });
 
       expect(
         chatHandler,
@@ -487,7 +489,7 @@ describe('wsStore', () => {
       expect(
         notifHandler,
         'notification handler should be called with correct payload.',
-      ).toHaveBeenCalledWith({ id: 1 });
+      ).toHaveBeenCalledWith(notifPayload);
     });
 
     it('unregisterHandler removes only the specified handler', () => {
@@ -500,7 +502,8 @@ describe('wsStore', () => {
       useWsStore.getState().connect('ws://test.example/ws');
       latestMock().simulateOpen();
 
-      latestMock().simulateMessage({ type: 'chat.message', payload: {} });
+      const payload = { id: '1', senderId: 'a', receiverId: 'b', content: 'test', timestamp: '2026-01-01T00:00:00Z' };
+      latestMock().simulateMessage({ type: 'chat.message', payload });
 
       expect(
         handler1,

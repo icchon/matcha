@@ -49,6 +49,29 @@ describe('notificationStore', () => {
     ).toBe(1);
   });
 
+  it('caps notifications at 100, dropping oldest', () => {
+    for (let i = 0; i < 101; i++) {
+      const notification: Notification = {
+        id: `notif-${i}`,
+        type: 'like',
+        message: `Notification ${i}`,
+        timestamp: `2026-01-01T00:${String(i).padStart(2, '0')}:00Z`,
+        read: false,
+      };
+      useNotificationStore.getState().onNotification(notification);
+    }
+
+    const state = useNotificationStore.getState();
+    expect(
+      state.notifications.length,
+      'After adding 101 notifications, only 100 should remain (MAX_NOTIFICATIONS=100). Check the slicing logic in onNotification.',
+    ).toBe(100);
+    expect(
+      state.notifications[0]?.id,
+      'The oldest notification (notif-0) should have been dropped. The first remaining should be notif-1. Check slice offset in onNotification.',
+    ).toBe('notif-1');
+  });
+
   it('maintains immutability when adding notifications', () => {
     const notif1: Notification = {
       id: 'notif-1',
