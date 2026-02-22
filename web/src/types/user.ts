@@ -49,3 +49,22 @@ export interface Picture {
   readonly isProfilePic: boolean | null;
   readonly createdAt: string;
 }
+
+export interface UserProfileDetail {
+  readonly userId: string;
+  readonly firstName: string | null;
+  readonly lastName: string | null;
+  readonly username: string | null;
+  readonly gender: Gender | null;
+  readonly sexualPreference: SexualPreference | null;
+  readonly birthday: string | null;
+  readonly occupation: string | null;
+  readonly biography: string | null;
+  readonly locationName: string | null;
+  readonly fameRating: number | null;
+  readonly pictures: readonly Picture[];
+  readonly tags: readonly Tag[];
+  readonly isOnline: boolean;
+  readonly lastConnection: string | null;
+  readonly distance?: number | null;
+}
