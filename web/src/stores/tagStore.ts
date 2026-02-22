@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Tag } from '@/types';
 import * as tagsApi from '@/api/tags';
+import { toUserFacingMessage } from '@/lib/errorUtils';
 
 interface TagState {
   readonly tags: readonly Tag[];
@@ -34,7 +35,7 @@ export const useTagStore = create<TagStore>()((set, get) => ({
       const allTags = await tagsApi.getTags();
       set({ allTags, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch tags';
+      const message = toUserFacingMessage(err, 'Failed to fetch tags');
       set({ error: message, isLoading: false });
     }
   },
@@ -51,7 +52,7 @@ export const useTagStore = create<TagStore>()((set, get) => ({
         set({ isLoading: false });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add tag';
+      const message = toUserFacingMessage(err, 'Failed to add tag');
       set({ error: message, isLoading: false });
     }
   },
@@ -65,7 +66,7 @@ export const useTagStore = create<TagStore>()((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to remove tag';
+      const message = toUserFacingMessage(err, 'Failed to remove tag');
       set({ error: message, isLoading: false });
     }
   },

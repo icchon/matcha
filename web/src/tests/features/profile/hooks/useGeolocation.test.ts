@@ -135,6 +135,40 @@ describe('useGeolocation', () => {
     ).toBeNull();
   });
 
+  it('setManualLocation rejects NaN coordinates', () => {
+    const { result } = renderHook(() => useGeolocation());
+
+    act(() => {
+      result.current.setManualLocation(NaN, 2.3522);
+    });
+
+    expect(
+      result.current.error,
+      'setManualLocation should reject NaN latitude. Check Number.isFinite guard.',
+    ).toBe('Invalid coordinates: latitude must be -90..90, longitude must be -180..180');
+    expect(
+      result.current.latitude,
+      'latitude should remain null when NaN is provided.',
+    ).toBeNull();
+  });
+
+  it('setManualLocation rejects Infinity coordinates', () => {
+    const { result } = renderHook(() => useGeolocation());
+
+    act(() => {
+      result.current.setManualLocation(48.8566, Infinity);
+    });
+
+    expect(
+      result.current.error,
+      'setManualLocation should reject Infinity longitude. Check Number.isFinite guard.',
+    ).toBe('Invalid coordinates: latitude must be -90..90, longitude must be -180..180');
+    expect(
+      result.current.longitude,
+      'longitude should remain null when Infinity is provided.',
+    ).toBeNull();
+  });
+
   it('setManualLocation clears previous error', () => {
     mockGetCurrentPosition.mockImplementation(
       (_success: PositionCallback, error: PositionErrorCallback) => {

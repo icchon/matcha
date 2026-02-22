@@ -9,7 +9,7 @@ interface UseGeolocationReturn {
   readonly setManualLocation: (lat: number, lng: number) => void;
 }
 
-// TODO(FE-XX): Wire useGeolocation to the edit profile page so users can update their location.
+// TODO(FE-GEOLOCATION): Wire useGeolocation to the edit profile page so users can update their location.
 export function useGeolocation(): UseGeolocationReturn {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -37,7 +37,7 @@ export function useGeolocation(): UseGeolocationReturn {
   }, []);
 
   const setManualLocation = useCallback((lat: number, lng: number) => {
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       setError('Invalid coordinates: latitude must be -90..90, longitude must be -180..180');
       return;
     }

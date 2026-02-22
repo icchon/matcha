@@ -94,6 +94,18 @@ describe('addTag', () => {
       'error should be set when addTag fails.',
     ).toBe('Add failed');
   });
+
+  it('maps 5xx addTag errors to generic fallback message', async () => {
+    const serverError = Object.assign(new Error('Internal Server Error'), { status: 503 });
+    mockAddTag.mockRejectedValue(serverError);
+
+    await useTagStore.getState().addTag(1);
+
+    expect(
+      useTagStore.getState().error,
+      '5xx errors should show generic fallback, not raw server message. Check toUserFacingMessage.',
+    ).toBe('Failed to add tag');
+  });
 });
 
 describe('removeTag', () => {

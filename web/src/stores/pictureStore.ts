@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import type { Picture } from '@/types';
 import * as picturesApi from '@/api/pictures';
-
-const MAX_PICTURES = 5;
+import { toUserFacingMessage } from '@/lib/errorUtils';
+import { MAX_PICTURES } from '@/lib/constants';
 
 interface PictureState {
   readonly pictures: readonly Picture[];
@@ -38,7 +38,7 @@ export const usePictureStore = create<PictureStore>()((set, get) => ({
       const picture = await picturesApi.uploadPicture(file);
       set({ pictures: [...get().pictures, picture], isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to upload picture';
+      const message = toUserFacingMessage(err, 'Failed to upload picture');
       set({ error: message, isLoading: false });
     }
   },
@@ -52,7 +52,7 @@ export const usePictureStore = create<PictureStore>()((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete picture';
+      const message = toUserFacingMessage(err, 'Failed to delete picture');
       set({ error: message, isLoading: false });
     }
   },

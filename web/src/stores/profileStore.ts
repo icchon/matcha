@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { UserProfile } from '@/types';
 import type { CreateProfileRequest } from '@/api/profile';
 import * as profileApi from '@/api/profile';
+import { toUserFacingMessage } from '@/lib/errorUtils';
 
 interface ProfileState {
   readonly profile: UserProfile | null;
@@ -33,7 +34,7 @@ export const useProfileStore = create<ProfileStore>()((set, get) => ({
       const profile = await profileApi.getMyProfile();
       set({ profile, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch profile';
+      const message = toUserFacingMessage(err, 'Failed to fetch profile');
       set({ error: message, isLoading: false });
     }
   },
@@ -44,7 +45,7 @@ export const useProfileStore = create<ProfileStore>()((set, get) => ({
       const profile = await profileApi.createProfile(params);
       set({ profile, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create profile';
+      const message = toUserFacingMessage(err, 'Failed to create profile');
       set({ error: message, isLoading: false });
     }
   },
@@ -55,7 +56,7 @@ export const useProfileStore = create<ProfileStore>()((set, get) => ({
       const profile = await profileApi.updateProfile(params);
       set({ profile, isLoading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update profile';
+      const message = toUserFacingMessage(err, 'Failed to update profile');
       set({ error: message, isLoading: false });
     }
   },

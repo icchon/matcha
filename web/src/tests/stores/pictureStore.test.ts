@@ -101,6 +101,19 @@ describe('uploadPicture', () => {
       'error should be set when upload fails.',
     ).toBe('Upload failed');
   });
+
+  it('maps 5xx upload errors to generic fallback message', async () => {
+    const serverError = Object.assign(new Error('Internal Server Error'), { status: 502 });
+    mockUploadPicture.mockRejectedValue(serverError);
+    const file = new File(['data'], 'photo.jpg', { type: 'image/jpeg' });
+
+    await usePictureStore.getState().uploadPicture(file);
+
+    expect(
+      usePictureStore.getState().error,
+      '5xx errors should show generic fallback, not raw server message. Check toUserFacingMessage.',
+    ).toBe('Failed to upload picture');
+  });
 });
 
 describe('deletePicture', () => {

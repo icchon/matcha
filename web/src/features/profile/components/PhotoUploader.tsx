@@ -2,8 +2,7 @@ import { useCallback, useRef, type FC, type ChangeEvent, type DragEvent, type Ke
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import type { Picture } from '@/types';
-
-const MAX_PICTURES = 5;
+import { MAX_PICTURES } from '@/lib/constants';
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 

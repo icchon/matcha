@@ -92,8 +92,8 @@ describe('getMyProfile', () => {
 
     expect(
       mockGet,
-      'getMyProfile should call GET on PROFILE.CREATE path (same endpoint for GET own profile).',
-    ).toHaveBeenCalledWith(API_PATHS.PROFILE.CREATE);
+      'getMyProfile should call GET on PROFILE.MY_PROFILE path. Check API_PATHS.PROFILE.MY_PROFILE.',
+    ).toHaveBeenCalledWith(API_PATHS.PROFILE.MY_PROFILE);
     expect(
       result.userId,
       'getMyProfile should return the user profile.',

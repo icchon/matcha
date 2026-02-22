@@ -91,6 +91,19 @@ describe('fetchProfile', () => {
       'isLoading should be false after fetch fails.',
     ).toBe(false);
   });
+
+  it('maps 5xx errors to generic fallback message', async () => {
+    const serverError = Object.assign(new Error('Internal Server Error'), { status: 500 });
+    mockGetMyProfile.mockRejectedValue(serverError);
+
+    await useProfileStore.getState().fetchProfile();
+
+    const state = useProfileStore.getState();
+    expect(
+      state.error,
+      '5xx errors should show generic fallback, not raw server message. Check toUserFacingMessage.',
+    ).toBe('Failed to fetch profile');
+  });
 });
 
 describe('createProfile', () => {

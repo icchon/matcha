@@ -44,3 +44,5 @@ export const API_PATHS = {
     LIST: '/me/notifications',
   },
 } as const;
+
+export const MAX_PICTURES = 5;
