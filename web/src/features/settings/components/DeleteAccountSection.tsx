@@ -55,7 +55,7 @@ const DeleteAccountSection: FC = () => {
             {...register('currentPassword')}
           />
           <Input
-            label="Confirm"
+            label="Confirm (case-sensitive)"
             placeholder="DELETE"
             error={errors.confirmText?.message}
             {...register('confirmText')}

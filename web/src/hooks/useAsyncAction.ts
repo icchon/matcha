@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 interface UseAsyncActionOptions {
@@ -20,6 +20,9 @@ export function useAsyncAction<T extends unknown[], R>(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   const clearError = useCallback(() => setError(null), []);
 
   const execute = useCallback(
@@ -28,13 +31,13 @@ export function useAsyncAction<T extends unknown[], R>(
       setError(null);
       try {
         const result = await action(...args);
-        if (options.successMessage) {
-          toast.success(options.successMessage);
+        if (optionsRef.current.successMessage) {
+          toast.success(optionsRef.current.successMessage);
         }
         return result;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : (options.fallbackError ?? 'An error occurred');
+          err instanceof Error ? err.message : (optionsRef.current.fallbackError ?? 'An error occurred');
         setError(message);
         toast.error(message);
         return undefined;
@@ -42,7 +45,7 @@ export function useAsyncAction<T extends unknown[], R>(
         setIsLoading(false);
       }
     },
-    [action, options.successMessage, options.fallbackError],
+    [action],
   );
 
   return { isLoading, error, execute, clearError };

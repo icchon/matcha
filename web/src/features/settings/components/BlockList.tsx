@@ -36,6 +36,7 @@ const BlockList: FC = () => {
               {/* TODO(BE-XX): Display username instead of raw ID once backend provides user info */}
               <span className="text-sm text-gray-900">{block.blockedId}</span>
               <Button
+                aria-label={`Unblock user ${block.blockedId}`}
                 variant="secondary"
                 size="sm"
                 onClick={() => unblock(block.blockedId)}

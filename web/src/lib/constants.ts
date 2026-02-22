@@ -7,8 +7,9 @@ export const API_PATHS = {
     SEND_VERIFICATION: '/auth/verify/mail',
     PASSWORD_FORGOT: '/auth/password/forgot',
     PASSWORD_RESET: '/auth/password/reset',
-    // Dedicated path for authenticated password change (currently shares endpoint with PASSWORD_RESET;
-    // backend differentiates by presence of currentPassword vs token)
+    // TODO(BE-XX): Move to /auth/password/change once backend supports a dedicated authenticated endpoint.
+    // Currently shares endpoint with PASSWORD_RESET; backend differentiates by presence of currentPassword vs token.
+    // Backend MUST validate Bearer token when currentPassword is present in the request body.
     CHANGE_PASSWORD: '/auth/password/reset',
     OAUTH_GOOGLE: '/auth/oauth/google/login',
     OAUTH_GITHUB: '/auth/oauth/github/login',

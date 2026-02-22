@@ -24,7 +24,7 @@ export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 export const deleteAccountSchema = z
   .object({
-    currentPassword: z.string().min(1, 'Please enter your current password'),
+    currentPassword: z.string().min(8, 'Password must be at least 8 characters'),
     confirmText: z.string().min(1, 'Please type DELETE to confirm'),
   })
   .refine((data) => data.confirmText === 'DELETE', {

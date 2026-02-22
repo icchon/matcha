@@ -178,7 +178,16 @@ describe('deleteAccountSchema', () => {
 
     expect(
       result.success,
-      'Empty currentPassword should fail. Check min(1) validation on currentPassword.',
+      'Empty currentPassword should fail. Check min(8) validation on currentPassword.',
+    ).toBe(false);
+  });
+
+  it('rejects when currentPassword is shorter than 8 characters', () => {
+    const result = deleteAccountSchema.safeParse({ confirmText: 'DELETE', currentPassword: 'short' });
+
+    expect(
+      result.success,
+      'currentPassword shorter than 8 chars should fail. Check min(8) validation.',
     ).toBe(false);
   });
 });

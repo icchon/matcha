@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChangePassword } from '@/features/settings/hooks/useChangePassword';
 import * as settingsApi from '@/api/settings';
+import { ApiClientError } from '@/api/client';
 import type { MessageResponse } from '@/types';
 
 const mockNavigate = vi.fn();
@@ -127,5 +128,67 @@ describe('useChangePassword', () => {
     });
 
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('maps 401 ApiClientError to "Incorrect current password." message', async () => {
+    vi.mocked(settingsApi.changePassword).mockRejectedValue(
+      new ApiClientError(401, { error: 'Unauthorized' }),
+    );
+
+    const { result } = renderHook(() => useChangePassword());
+
+    await act(async () => {
+      await result.current.changePassword({
+        currentPassword: 'wrong',
+        newPassword: 'Newpass1!',
+      });
+    });
+
+    expect(
+      result.current.error,
+      'A 401 status should be mapped to a user-friendly "Incorrect current password." message.',
+    ).toBe('Incorrect current password.');
+    expect(toast.error).toHaveBeenCalledWith('Incorrect current password.');
+  });
+
+  it('maps 422 ApiClientError to "Invalid password format." message', async () => {
+    vi.mocked(settingsApi.changePassword).mockRejectedValue(
+      new ApiClientError(422, { error: 'Validation failed' }),
+    );
+
+    const { result } = renderHook(() => useChangePassword());
+
+    await act(async () => {
+      await result.current.changePassword({
+        currentPassword: 'oldpass123',
+        newPassword: 'weak',
+      });
+    });
+
+    expect(
+      result.current.error,
+      'A 422 status should be mapped to a user-friendly "Invalid password format." message.',
+    ).toBe('Invalid password format.');
+    expect(toast.error).toHaveBeenCalledWith('Invalid password format.');
+  });
+
+  it('re-throws non-mapped ApiClientError with original message', async () => {
+    vi.mocked(settingsApi.changePassword).mockRejectedValue(
+      new ApiClientError(500, { error: 'Internal server error' }),
+    );
+
+    const { result } = renderHook(() => useChangePassword());
+
+    await act(async () => {
+      await result.current.changePassword({
+        currentPassword: 'oldpass123',
+        newPassword: 'Newpass1!',
+      });
+    });
+
+    expect(
+      result.current.error,
+      'Non-mapped ApiClientError should fall through with original error message.',
+    ).toBe('Internal server error');
   });
 });

@@ -78,7 +78,7 @@ describe('BlockList', () => {
     expect(screen.getByText('Failed to load')).toBeInTheDocument();
   });
 
-  it('renders list of blocked users with unblock buttons', () => {
+  it('renders list of blocked users with unblock buttons with aria-labels', () => {
     mockBlocks = blocks;
     render(<BlockList />);
 
@@ -87,10 +87,20 @@ describe('BlockList', () => {
       'Should display blocked user IDs.',
     ).toBeInTheDocument();
     expect(screen.getByText('user-3')).toBeInTheDocument();
+
+    const unblockButtons = screen.getAllByRole('button', { name: /unblock/i });
     expect(
-      screen.getAllByRole('button', { name: /unblock/i }),
+      unblockButtons,
       'Should render an Unblock button for each blocked user.',
     ).toHaveLength(2);
+    expect(
+      screen.getByRole('button', { name: 'Unblock user user-2' }),
+      'Unblock button should have aria-label identifying which user will be unblocked.',
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Unblock user user-3' }),
+      'Unblock button should have aria-label identifying which user will be unblocked.',
+    ).toBeInTheDocument();
   });
 
   it('calls unblock when unblock button is clicked', async () => {
