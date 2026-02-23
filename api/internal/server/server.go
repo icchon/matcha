@@ -17,7 +17,6 @@ import (
 	"github.com/icchon/matcha/api/internal/infrastructure/db/postgres"
 	"github.com/icchon/matcha/api/internal/infrastructure/db/uow"
 	"github.com/icchon/matcha/api/internal/infrastructure/file"
-	smtp "github.com/icchon/matcha/api/internal/infrastructure/mail"
 	"github.com/icchon/matcha/api/internal/infrastructure/oauth"
 	"github.com/icchon/matcha/api/internal/infrastructure/publisher"
 	"github.com/icchon/matcha/api/internal/infrastructure/subscriber"
@@ -49,6 +48,8 @@ type Config struct {
 	SmtpPassword string
 	SmtpSender   string
 
+	MailMode string
+
 	BaseUrl string
 }
 
@@ -72,14 +73,17 @@ func NewServer(
 		log.Printf("Invalid SMTP_PORT: %v", err)
 		return nil
 	}
-	_ = smtp.NewSmtpClient(client.MailConfig{
+	mailClient, err := NewMailClient(config.MailMode, client.MailConfig{
 		Host:     config.SmtpHost,
 		Port:     port,
 		Username: config.SmtpUsername,
 		Password: config.SmtpPassword,
 		From:     config.SmtpSender,
 	})
-	mockMailClient := smtp.NewMockMailClient()
+	if err != nil {
+		log.Fatalf("Failed to create mail client: %v", err)
+		return nil
+	}
 	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
 	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
 
@@ -107,7 +111,7 @@ func NewServer(
 
 	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, notificationPub)
 	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService, userDataRepository, userTagRepository, tagRepository)
-	mailService := mail.NewApplicationMailService(mockMailClient, config.BaseUrl)
+	mailService := mail.NewApplicationMailService(mailClient, config.BaseUrl)
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
 	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, notificationService, userTagRepository, userDataRepository)
 	chatService := chat.NewChatService(connectionRepo, messageRepository, profileService)

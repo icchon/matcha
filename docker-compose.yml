@@ -11,7 +11,9 @@ services:
       - filesrv
       - wsgateway
     env_file: ./api/.env
-  
+    environment:
+      MAIL_MODE: mock
+
   wsgateway:
     build:
       context: ./wsgateway

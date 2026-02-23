@@ -35,6 +35,7 @@ func checkEnv() error {
 		"SMTP_USERNAME",
 		"SMTP_PASSWORD",
 		"SMTP_SENDER",
+		"MAIL_MODE",
 		"BASE_URL",
 		"REDIS_ADDR",
 	}
@@ -79,6 +80,7 @@ func main() {
 		SmtpUsername:        getEnv("SMTP_USERNAME"),
 		SmtpPassword:        getEnv("SMTP_PASSWORD"),
 		SmtpSender:          getEnv("SMTP_SENDER"),
+		MailMode:            getEnv("MAIL_MODE"),
 		BaseUrl:             getEnv("BASE_URL"),
 		ImageUploadEndpoint: getEnv("IMAGE_UPLOAD_ENDPOINT"),
 	}
