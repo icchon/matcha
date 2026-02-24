@@ -9,4 +9,6 @@ import (
 type NotificationService interface {
 	GetNotifications(ctx context.Context, recipientID uuid.UUID) ([]*entity.Notification, error)
 	CreateAndSendNotification(ctx context.Context, senderID uuid.UUID, recipiendID uuid.UUID, notifType entity.NotificationType) (*entity.Notification, error)
+	MarkNotificationAsRead(ctx context.Context, notificationID int64, recipientID uuid.UUID) error
+	MarkAllNotificationsAsRead(ctx context.Context, recipientID uuid.UUID) error
 }

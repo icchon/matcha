@@ -20,6 +20,7 @@ type repositoryManager struct {
 	likeRepo              repo.LikeRepository
 	blockRepo             repo.BlockRepository
 	userDataRepo          repo.UserDataRepository
+	reportRepo            repo.ReportRepository
 }
 
 func NewRepositoryManager(
@@ -38,6 +39,7 @@ func NewRepositoryManager(
 	likeRepo repo.LikeRepository,
 	blockRepo repo.BlockRepository,
 	userDataRepo repo.UserDataRepository,
+	reportRepo repo.ReportRepository,
 ) repo.RepositoryManager {
 	return &repositoryManager{
 		userRepo:              userRepo,
@@ -55,6 +57,7 @@ func NewRepositoryManager(
 		likeRepo:              likeRepo,
 		blockRepo:             blockRepo,
 		userDataRepo:          userDataRepo,
+		reportRepo:            reportRepo,
 	}
 }
 
@@ -116,4 +119,8 @@ func (r *repositoryManager) VerificationTokenRepo() repo.VerificationTokenReposi
 
 func (r *repositoryManager) ProfileRepo() repo.UserProfileRepository {
 	return r.profileRepo
+}
+
+func (r *repositoryManager) ReportRepo() repo.ReportRepository {
+	return r.reportRepo
 }

@@ -4,6 +4,21 @@ This document outlines the API endpoints for the Matcha application.
 
 ---
 
+## General
+
+### Sample
+
+-   **URL:** `/api/v1/sample`
+-   **Method:** `GET`
+-   **Response:**
+    ```json
+    {
+        "message": "Hello, World!"
+    }
+    ```
+
+---
+
 ## Authentication
 
 ### Signup
@@ -20,7 +35,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "message": "User created successfully. Please verify your email."
+        "message": "Please check your email to verify your account"
     }
     ```
 
@@ -38,6 +53,9 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
+        "user_id": "uuid_of_user",
+        "is_verified": true,
+        "auth_method": "local",
         "access_token": "...",
         "refresh_token": "..."
     }
@@ -50,8 +68,23 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** (No body, requires Authorization header)
 -   **Response:**
     ```json
+    {}
+    ```
+
+### Refresh Token
+
+-   **URL:** `/api/v1/auth/refresh`
+-   **Method:** `POST`
+-   **Request Body:**
+    ```json
     {
-        "message": "Logged out successfully"
+        "refresh_token": "..."
+    }
+    ```
+-   **Response:**
+    ```json
+    {
+        "access_token": "..."
     }
     ```
 
@@ -62,9 +95,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** URL parameter `token`.
 -   **Response:**
     ```json
-    {
-        "message": "Email verified successfully"
-    }
+    {}
     ```
     
 ### Resend Verification Email
@@ -74,13 +105,14 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
+        "user_id": "uuid_of_user",
         "email": "user@example.com"
     }
     ```
 -   **Response:**
     ```json
     {
-        "message": "Verification email sent"
+        "message": "Please check your email to verify your account"
     }
     ```
 
@@ -97,7 +129,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     {
-        "message": "Password reset email sent"
+        "message": "Please check your email to reset your password"
     }
     ```
 
@@ -114,9 +146,7 @@ This document outlines the API endpoints for the Matcha application.
     ```
 -   **Response:**
     ```json
-    {
-        "message": "Password reset successfully"
-    }
+    {}
     ```
 
 ### OAuth - Google Login
@@ -126,12 +156,16 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
-        "code": "oauth_code_from_google"
+        "code": "oauth_code_from_google",
+        "code_verifier": "code_verifier_string"
     }
     ```
 -   **Response:**
     ```json
     {
+        "user_id": "uuid_of_user",
+        "is_verified": true,
+        "auth_method": "google",
         "access_token": "...",
         "refresh_token": "..."
     }
@@ -144,12 +178,16 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request Body:**
     ```json
     {
-        "code": "oauth_code_from_github"
+        "code": "oauth_code_from_github",
+        "code_verifier": "code_verifier_string"
     }
     ```
 -   **Response:**
     ```json
     {
+        "user_id": "uuid_of_user",
+        "is_verified": true,
+        "auth_method": "github",
         "access_token": "...",
         "refresh_token": "..."
     }
@@ -193,6 +231,36 @@ This document outlines the API endpoints for the Matcha application.
     ```json
     {
         "message": "User blocked successfully"
+    }
+    ```
+
+### Unblock a User
+
+-   **URL:** `/api/v1/users/{userID}/block`
+-   **Method:** `DELETE`
+-   **Request:** URL parameter `userID`. Requires Authorization header.
+-   **Response:**
+    ```json
+    {
+        "message": "User unblocked successfully"
+    }
+    ```
+
+### Report a User
+
+-   **URL:** `/api/v1/users/{userID}/report`
+-   **Method:** `POST`
+-   **Request Body:**
+    ```json
+    {
+        "reason": "..."
+    }
+    ```
+-   **Request:** URL parameter `userID`. Requires Authorization header.
+-   **Response:**
+    ```json
+    {
+        "message": "User reported successfully"
     }
     ```
 
@@ -268,11 +336,27 @@ This document outlines the API endpoints for the Matcha application.
     [ /* array of notification objects */ ]
     ```
 
+### Mark a Notification as Read
+
+-   **URL:** `/api/v1/me/notifications/{id}/read`
+-   **Method:** `PUT`
+-   **Request:** URL parameter `id`. Requires Authorization header.
+-   **Response:** `204 No Content`
+
+### Mark All Notifications as Read
+
+-   **URL:** `/api/v1/me/notifications/read`
+-   **Method:** `POST`
+-   **Request:** Requires Authorization header.
+-   **Response:** `204 No Content`
+
 ### My User Data
 
 -   **URL:** `/api/v1/me/data`
 -   **Method:** `GET`, `POST`, `PUT`
 -   **Request:** Requires Authorization header.
+    -   `POST`: Creates user data. Returns `201 Created` with the `user_data` object.
+-   `PUT`: Updates user data.
     -   `POST`/`PUT` Body:
         ```json
         {
@@ -309,6 +393,16 @@ This document outlines the API endpoints for the Matcha application.
 -   **Request:** URL parameter `tagID`. Requires Authorization header.
 -   **Response:** `204 No Content`
 
+### Get My Profile
+
+-   **URL:** `/api/v1/me/profile`
+-   **Method:** `GET`
+-   **Request:** Requires Authorization header.
+-   **Response:**
+    ```json
+    { /* user_profile object */ }
+    ```
+
 ### My Profile
 
 -   **URL:** `/api/v1/me/profile`
@@ -330,6 +424,32 @@ This document outlines the API endpoints for the Matcha application.
 -   **Response:**
     ```json
     { /* user_profile object */ }
+    ```
+
+### Upload Profile Picture
+
+-   **URL:** `/api/v1/me/profile/pictures`
+-   **Method:** `POST`
+-   **Request:** `multipart/form-data` with `image` field. Requires Authorization header.
+-   **Response:**
+    ```json
+    {
+        "picture_id": 1,
+        "user_id": "uuid_of_user",
+        "url": "http://example.com/image.jpg"
+    }
+    ```
+
+### Delete Profile Picture
+
+-   **URL:** `/api/v1/me/profile/pictures/{pictureID}`
+-   **Method:** `DELETE`
+-   **Request:** URL parameter `pictureID`. Requires Authorization header.
+-   **Response:**
+    ```json
+    {
+        "message": "Picture deleted successfully"
+    }
     ```
     
 ### Get Who Liked Me
@@ -386,6 +506,7 @@ This document outlines the API endpoints for the Matcha application.
 -   **URL:** `/api/v1/users/{userID}/profile`
 -   **Method:** `GET`
 -   **Request:** URL parameter `userID`. Requires Authorization header.
+-   **Description:** Viewing a user\'s profile records a view event by the authenticated user.
 -   **Response:**
     ```json
     { /* user_profile object */ }

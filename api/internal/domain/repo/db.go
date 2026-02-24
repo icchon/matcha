@@ -24,4 +24,5 @@ type RepositoryManager interface {
 	LikeRepo() LikeRepository
 	BlockRepo() BlockRepository
 	UserDataRepo() UserDataRepository
+	ReportRepo() ReportRepository
 }

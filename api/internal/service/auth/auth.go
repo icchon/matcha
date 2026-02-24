@@ -358,7 +358,15 @@ func (s *authService) IssueAccessToken(ctx context.Context, oldRefreshToken stri
 		log.Printf("verify refresh token error: %v", err)
 		return "", err
 	}
-	accessToken, err := GenerateAccessToken(token.UserID, true, entity.ProviderLocal, s.jwtSigningKey)
+	auths, err := s.authRepo.Query(ctx, &repo.AuthQuery{UserID: &token.UserID})
+	if err != nil {
+		return "", apperrors.ErrInternalServer
+	}
+	if len(auths) == 0 {
+		return "", apperrors.ErrNotFound
+	}
+	auth := auths[0]
+	accessToken, err := GenerateAccessToken(token.UserID, auth.IsVerified, auth.Provider, s.jwtSigningKey)
 	if err != nil {
 		log.Printf("generate access token error: %v", err)
 		return "", apperrors.ErrInternalServer
@@ -380,4 +388,27 @@ func (s *authService) IssueRefreshToken(ctx context.Context, userID uuid.UUID) (
 		return "", err
 	}
 	return refreshToken, nil
+}
+
+func (s *authService) RefreshAccessToken(ctx context.Context, refreshTokenString string) (string, error) {
+	refreshToken, err := s.VerifyRefreshToken(ctx, refreshTokenString)
+	if err != nil {
+		return "", err
+	}
+
+	auths, err := s.authRepo.Query(ctx, &repo.AuthQuery{UserID: &refreshToken.UserID})
+	if err != nil {
+		return "", apperrors.ErrInternalServer
+	}
+	if len(auths) == 0 {
+		return "", apperrors.ErrNotFound
+	}
+	auth := auths[0]
+
+	newAccessToken, err := GenerateAccessToken(refreshToken.UserID, auth.IsVerified, auth.Provider, s.jwtSigningKey)
+	if err != nil {
+		return "", apperrors.ErrInternalServer
+	}
+
+	return newAccessToken, nil
 }

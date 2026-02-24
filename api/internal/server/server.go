@@ -72,14 +72,14 @@ func NewServer(
 		log.Printf("Invalid SMTP_PORT: %v", err)
 		return nil
 	}
-	_ = smtp.NewSmtpClient(client.MailConfig{
+	mockMailClient := smtp.NewSmtpClient(client.MailConfig{
 		Host:     config.SmtpHost,
 		Port:     port,
 		Username: config.SmtpUsername,
 		Password: config.SmtpPassword,
 		From:     config.SmtpSender,
 	})
-	mockMailClient := smtp.NewMockMailClient()
+	// mockMailClient := smtp.NewMockMailClient()
 	githubClient := oauth.NewGithubClient(config.GithubClientID, config.GithubClientSecret, config.RidirectURI)
 	googleClient := oauth.NewGoogleClient(config.GoogleClientID, config.GoogleClientSecret, config.RidirectURI)
 
@@ -104,12 +104,14 @@ func NewServer(
 	userDataRepository := postgres.NewUserDataRepository(db)
 	userTagRepository := postgres.NewUserTagRepository(db)
 	tagRepository := postgres.NewTagRepository(db)
+	reportRepository := postgres.NewReportRepository(db)
 
 	notificationService := notice.NewNotificationService(unitOfWork, notificationRepository, notificationPub)
-	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService, userDataRepository, userTagRepository, tagRepository)
+	userService := user.NewUserService(unitOfWork, likeRepository, viewRepository, connectionRepo, notificationService, userDataRepository, userTagRepository, tagRepository, reportRepository)
 	mailService := mail.NewApplicationMailService(mockMailClient, config.BaseUrl)
 	authService := auth.NewAuthService(unitOfWork, authRepository, userRepository, refreshRepository, passwordResetRepository, verificationRepository, googleClient, githubClient, mailService, config.HMACSecretKey, config.JWTSigningKey)
-	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, notificationService, userTagRepository, userDataRepository)
+	blockRepository := postgres.NewBlockRepository(db) // New line
+	profileService := profile.NewProfileService(unitOfWork, profileRepository, fileClient, pictureRepository, viewRepository, likeRepository, blockRepository, notificationService, userTagRepository, userDataRepository)
 	chatService := chat.NewChatService(connectionRepo, messageRepository, profileService)
 
 	userHandler := handler.NewUserHandler(userService, profileService)
@@ -168,6 +170,7 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 			})
 			r.Post("/login", ah.LoginHandler)
 			r.Post("/signup", ah.SignupHandler)
+			r.Post("/refresh", ah.RefreshHandler)
 			r.Post("/verify/mail", ah.SendVerificationEmailHandler)
 			r.Get("/verify/{token}", ah.VerifyEmailHandler)
 			r.Post("/oauth/google/login", ah.GoogleLoginHandler)
@@ -183,6 +186,7 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 					r.Post("/like", uh.LikeUserHandler)
 					r.Delete("/like", uh.UnlikeUserHandler)
 					r.Post("/block", uh.BlockUserHandler)
+					r.Post("/report", uh.ReportUserHandler)
 					r.Get("/profile", ph.GetUserProfileHandler)
 				})
 			})
@@ -195,7 +199,11 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 			r.Get("/views", uh.GetMyViewedListHandler)
 			r.Get("/blocks", uh.GetMyBlockedListHandler)
 			r.Get("/chats", ch.GetUserChats)
-			r.Get("/notifications", nh.GetUserNotifications)
+			r.Route("/notifications", func(r chi.Router) {
+				r.Get("/", nh.GetUserNotifications)
+				r.Put("/{id}/read", nh.MarkNotificationAsReadHandler)
+				r.Post("/read", nh.MarkAllNotificationsAsReadHandler)
+			})
 
 			r.Route("/data", func(r chi.Router) {
 				r.Get("/", uh.GetMyUserDataHandler)
@@ -210,6 +218,7 @@ func (s *Server) setupRoutes(uh *handler.UserHandler, sh *handler.SampleHandler,
 			})
 
 			r.Route("/profile", func(r chi.Router) {
+				r.Get("/", ph.GetMyProfileHandler)
 				r.Post("/", ph.CreateProfileHandler)
 				r.Put("/", ph.UpdateProfileHandler)
 				r.Post("/pictures", ph.UploadProfilePictureHandler)

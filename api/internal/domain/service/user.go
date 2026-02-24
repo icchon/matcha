@@ -23,4 +23,5 @@ type UserService interface {
 	GetUserTags(ctx context.Context, userID uuid.UUID) ([]*entity.Tag, error)
 	AddUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error
 	DeleteUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error
+	ReportUser(ctx context.Context, reporterID, reportedID uuid.UUID, reason string) error
 }

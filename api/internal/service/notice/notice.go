@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/icchon/matcha/api/internal/apperrors" // Added this import
 	"github.com/icchon/matcha/api/internal/domain/client"
 	"github.com/icchon/matcha/api/internal/domain/entity"
 	"github.com/icchon/matcha/api/internal/domain/repo"
@@ -64,4 +65,51 @@ func (s *notificationService) CreateAndSendNotification(ctx context.Context, sen
 		return nil, err
 	}
 	return notification, nil
+}
+
+func (s *notificationService) MarkNotificationAsRead(ctx context.Context, notificationID int64, recipientID uuid.UUID) error {
+	notification, err := s.notificationRepo.Find(ctx, notificationID)
+	if err != nil {
+		return err // Handle database errors
+	}
+	if notification == nil {
+		return apperrors.ErrNotFound // Notification not found
+	}
+	if notification.RecipientID != recipientID {
+		return apperrors.ErrUnauthorized // User is not the recipient of this notification
+	}
+
+	// Only update if it's not already read
+	if !notification.IsRead.Bool {
+		notification.IsRead = sql.NullBool{Bool: true, Valid: true}
+		return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+			return rm.NotificationRepo().Update(ctx, notification)
+		})
+	}
+	return nil // Already read, no action needed
+}
+
+func (s *notificationService) MarkAllNotificationsAsRead(ctx context.Context, recipientID uuid.UUID) error {
+	isRead := false
+	notifications, err := s.notificationRepo.Query(ctx, &repo.NotificationQuery{
+		RecipientID: &recipientID,
+		IsRead:      &isRead,
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(notifications) == 0 {
+		return nil // No unread notifications to mark
+	}
+
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		for _, notif := range notifications {
+			notif.IsRead = sql.NullBool{Bool: true, Valid: true}
+			if err := rm.NotificationRepo().Update(ctx, notif); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

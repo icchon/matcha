@@ -21,6 +21,7 @@ type mockRepositoryManager struct {
 	connectionRepo         repo.ConnectionRepository
 	likeRepo               repo.LikeRepository
 	viewRepo               repo.ViewRepository
+	reportRepo             repo.ReportRepository
 }
 
 func (m *mockRepositoryManager) UserRepo() repo.UserRepository {
@@ -37,6 +38,9 @@ func (m *mockRepositoryManager) LikeRepo() repo.LikeRepository {
 }
 func (m *mockRepositoryManager) ViewRepo() repo.ViewRepository {
 	return m.viewRepo
+}
+func (m *mockRepositoryManager) ReportRepo() repo.ReportRepository {
+	return m.reportRepo
 }
 
 // mockUow is a mock for repo.UnitOfWork for testing services.
@@ -90,7 +94,17 @@ func TestUserService_DeleteUser(t *testing.T) {
 			mockRM := &mockRepositoryManager{userRepo: userRepo}
 			mockUOW := &mockUow{rm: mockRM}
 
-			service := &userService{uow: mockUOW}
+			// Instantiate all required mocks for NewUserService
+			mockLikeRepo := mock.NewMockLikeRepository(ctrl)
+			mockViewRepo := mock.NewMockViewRepository(ctrl)
+			mockConnectionRepo := mock.NewMockConnectionRepository(ctrl)
+			mockNotificationService := mock.NewMockNotificationService(ctrl)
+			mockUserDataRepo := mock.NewMockUserDataRepository(ctrl)
+			mockUserTagRepo := mock.NewMockUserTagRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockReportRepo := mock.NewMockReportRepository(ctrl)
+
+			service := NewUserService(mockUOW, mockLikeRepo, mockViewRepo, mockConnectionRepo, mockNotificationService, mockUserDataRepo, mockUserTagRepo, mockTagRepo, mockReportRepo)
 			err := service.DeleteUser(context.Background(), userID)
 
 			assert.Equal(t, tc.expectedErr, err)
@@ -163,7 +177,17 @@ func TestUserService_BlockUser(t *testing.T) {
 			}
 			mockUOW := &mockUow{rm: mockRM}
 
-			service := &userService{uow: mockUOW}
+			// Instantiate all required mocks for NewUserService that are not part of mockRM
+			mockLikeRepo := mock.NewMockLikeRepository(ctrl) // Using the general repository
+			mockViewRepo := mock.NewMockViewRepository(ctrl)
+			mockConnectionRepo := mock.NewMockConnectionRepository(ctrl)
+			mockNotificationService := mock.NewMockNotificationService(ctrl)
+			mockUserDataRepo := mock.NewMockUserDataRepository(ctrl)
+			mockUserTagRepo := mock.NewMockUserTagRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockReportRepo := mock.NewMockReportRepository(ctrl)
+
+			service := NewUserService(mockUOW, mockLikeRepo, mockViewRepo, mockConnectionRepo, mockNotificationService, mockUserDataRepo, mockUserTagRepo, mockTagRepo, mockReportRepo)
 			err := service.BlockUser(context.Background(), blockerID, blockedID)
 			assert.Equal(t, tc.expectedErr, err)
 		})
@@ -209,7 +233,16 @@ func TestUserService_UnblockUser(t *testing.T) {
 			mockRM := &mockRepositoryManager{blockRepo: blockRepo}
 			mockUOW := &mockUow{rm: mockRM}
 
-			service := &userService{uow: mockUOW}
+			mockLikeRepo := mock.NewMockLikeRepository(ctrl)
+			mockViewRepo := mock.NewMockViewRepository(ctrl)
+			mockConnectionRepo := mock.NewMockConnectionRepository(ctrl)
+			mockNotificationService := mock.NewMockNotificationService(ctrl)
+			mockUserDataRepo := mock.NewMockUserDataRepository(ctrl)
+			mockUserTagRepo := mock.NewMockUserTagRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockReportRepo := mock.NewMockReportRepository(ctrl)
+
+			service := NewUserService(mockUOW, mockLikeRepo, mockViewRepo, mockConnectionRepo, mockNotificationService, mockUserDataRepo, mockUserTagRepo, mockTagRepo, mockReportRepo)
 			err := service.UnblockUser(context.Background(), blockerID, blockedID)
 
 			assert.Equal(t, tc.expectedErr, err)
@@ -296,7 +329,13 @@ func TestUserService_LikeUser(t *testing.T) {
 			mockRM := &mockRepositoryManager{likeRepo: likeRepo, connectionRepo: connRepo}
 			mockUOW := &mockUow{rm: mockRM}
 
-			service := &userService{uow: mockUOW, likeRepo: likeQueryRepo, notifSvc: notifSvc}
+			mockViewRepo := mock.NewMockViewRepository(ctrl)
+			mockUserDataRepo := mock.NewMockUserDataRepository(ctrl)
+			mockUserTagRepo := mock.NewMockUserTagRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockReportRepo := mock.NewMockReportRepository(ctrl)
+
+			service := NewUserService(mockUOW, likeQueryRepo, mockViewRepo, connRepo, notifSvc, mockUserDataRepo, mockUserTagRepo, mockTagRepo, mockReportRepo)
 
 			conn, err := service.LikeUser(context.Background(), likerID, likedID)
 
@@ -360,7 +399,16 @@ func TestUserService_FindBlockList(t *testing.T) {
 			mockRM := &mockRepositoryManager{blockRepo: blockRepo}
 			mockUOW := &mockUow{rm: mockRM, err: tc.uowError}
 
-			service := &userService{uow: mockUOW}
+			mockLikeRepo := mock.NewMockLikeRepository(ctrl)
+			mockViewRepo := mock.NewMockViewRepository(ctrl)
+			mockConnectionRepo := mock.NewMockConnectionRepository(ctrl)
+			mockNotificationService := mock.NewMockNotificationService(ctrl)
+			mockUserDataRepo := mock.NewMockUserDataRepository(ctrl)
+			mockUserTagRepo := mock.NewMockUserTagRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockReportRepo := mock.NewMockReportRepository(ctrl)
+
+			service := NewUserService(mockUOW, mockLikeRepo, mockViewRepo, mockConnectionRepo, mockNotificationService, mockUserDataRepo, mockUserTagRepo, mockTagRepo, mockReportRepo)
 			blocks, err := service.FindBlockList(context.Background(), userID)
 
 			assert.Equal(t, tc.expectedErr, err)
@@ -428,7 +476,14 @@ func TestUserService_UnlikeUser(t *testing.T) {
 
 			mockRM := &mockRepositoryManager{likeRepo: likeRepo, connectionRepo: connRepo}
 			mockUOW := &mockUow{rm: mockRM}
-			service := NewUserService(mockUOW, nil, nil, nil, notifService, nil, nil, nil) // Pass notifService
+
+			mockViewRepo := mock.NewMockViewRepository(ctrl)
+			mockUserDataRepo := mock.NewMockUserDataRepository(ctrl)
+			mockUserTagRepo := mock.NewMockUserTagRepository(ctrl)
+			mockTagRepo := mock.NewMockTagRepository(ctrl)
+			mockReportRepo := mock.NewMockReportRepository(ctrl)
+
+			service := NewUserService(mockUOW, likeRepo, mockViewRepo, connRepo, notifService, mockUserDataRepo, mockUserTagRepo, mockTagRepo, mockReportRepo)
 			err := service.UnlikeUser(context.Background(), likerID, likedID)
 			assert.Equal(t, tc.expectedErr, err)
 		})
@@ -473,7 +528,7 @@ func TestUserService_FindMyLikedList(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(likeQueryRepo)
 			}
-			service := &userService{likeRepo: likeQueryRepo}
+			service := NewUserService(nil, likeQueryRepo, nil, nil, nil, nil, nil, nil, nil)
 			likes, err := service.FindMyLikedList(context.Background(), userID)
 			assert.Equal(t, tc.expectedErr, err)
 			assert.Equal(t, tc.expectedLikes, likes)
@@ -488,22 +543,22 @@ func TestUserService_FindMyViewedList(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		setupMocks    func(viewQueryRepo *mock.MockViewQueryRepository)
+		setupMocks    func(viewRepo *mock.MockViewRepository)
 		expectedViews []*entity.View
 		expectedErr   error
 	}{
 		{
 			name: "Success",
-			setupMocks: func(viewQueryRepo *mock.MockViewQueryRepository) {
-				viewQueryRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedViews, nil)
+			setupMocks: func(viewRepo *mock.MockViewRepository) {
+				viewRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(expectedViews, nil)
 			},
 			expectedViews: expectedViews,
 			expectedErr:   nil,
 		},
 		{
 			name: "Query fails",
-			setupMocks: func(viewQueryRepo *mock.MockViewQueryRepository) {
-				viewQueryRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
+			setupMocks: func(viewRepo *mock.MockViewRepository) {
+				viewRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, dbErr)
 			},
 			expectedViews: nil,
 			expectedErr:   dbErr,
@@ -515,11 +570,11 @@ func TestUserService_FindMyViewedList(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			viewQueryRepo := mock.NewMockViewQueryRepository(ctrl)
+			viewRepo := mock.NewMockViewRepository(ctrl)
 			if tc.setupMocks != nil {
-				tc.setupMocks(viewQueryRepo)
+				tc.setupMocks(viewRepo)
 			}
-			service := &userService{viewRepo: viewQueryRepo}
+			service := NewUserService(nil, nil, viewRepo, nil, nil, nil, nil, nil, nil)
 			views, err := service.FindMyViewedList(context.Background(), userID)
 			assert.Equal(t, tc.expectedErr, err)
 			assert.Equal(t, tc.expectedViews, views)
@@ -565,7 +620,7 @@ func TestUserService_FindConnections(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(connQueryRepo)
 			}
-			service := &userService{connectionRepo: connQueryRepo}
+			service := NewUserService(nil, nil, nil, connQueryRepo, nil, nil, nil, nil, nil)
 			conns, err := service.FindConnections(context.Background(), userID)
 			assert.Equal(t, tc.expectedErr, err)
 			assert.ElementsMatch(t, tc.expectedConns, conns)

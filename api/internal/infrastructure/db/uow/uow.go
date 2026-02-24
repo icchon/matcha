@@ -39,6 +39,7 @@ func (u *unitOfWork) Do(ctx context.Context, fn func(m repo.RepositoryManager) e
 		postgres.NewLikeRepository(tx),
 		postgres.NewBlockRepository(tx),
 		postgres.NewUserDataRepository(tx),
+		postgres.NewReportRepository(tx),
 	)
 	if err = fn(manager); err != nil {
 		txErr := tx.Rollback()

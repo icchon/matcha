@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/icchon/matcha/api/internal/apperrors"
 	"github.com/icchon/matcha/api/internal/domain/service"
-	"github.com/icchon/matcha/api/internal/presentation/helper" // Add this import
+	"github.com/icchon/matcha/api/internal/presentation/helper"
 	"github.com/icchon/matcha/api/internal/presentation/middleware"
 )
 

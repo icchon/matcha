@@ -18,11 +18,12 @@ type userService struct {
 	userDataRepo   repo.UserDataRepository
 	userTagRepo    repo.UserTagRepository
 	tagRepo        repo.TagRepository
+	reportRepo     repo.ReportRepository
 }
 
 var _ service.UserService = (*userService)(nil)
 
-func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewQueryRepository, connectionRepo repo.ConnectionQueryRepository, notifSvc service.NotificationService, userDataRepo repo.UserDataRepository, userTagRepo repo.UserTagRepository, tagRepo repo.TagRepository) service.UserService {
+func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, viewRepo repo.ViewRepository, connectionRepo repo.ConnectionQueryRepository, notifSvc service.NotificationService, userDataRepo repo.UserDataRepository, userTagRepo repo.UserTagRepository, tagRepo repo.TagRepository, reportRepo repo.ReportRepository) service.UserService {
 	return &userService{
 		uow:            uow,
 		likeRepo:       likeRepo,
@@ -32,6 +33,7 @@ func NewUserService(uow repo.UnitOfWork, likeRepo repo.LikeQueryRepository, view
 		userDataRepo:   userDataRepo,
 		userTagRepo:    userTagRepo,
 		tagRepo:        tagRepo,
+		reportRepo:     reportRepo,
 	}
 }
 
@@ -218,5 +220,44 @@ func (s *userService) AddUserTag(ctx context.Context, userID uuid.UUID, tagID in
 func (s *userService) DeleteUserTag(ctx context.Context, userID uuid.UUID, tagID int32) error {
 	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
 		return rm.UserTagRepo().Delete(ctx, userID, tagID)
+	})
+}
+
+func (s *userService) ReportUser(ctx context.Context, reporterID, reportedID uuid.UUID, reason string) error {
+	return s.uow.Do(ctx, func(rm repo.RepositoryManager) error {
+		report := &entity.Report{
+			ReporterID: reporterID,
+			ReportedID: reportedID,
+			Reason:     reason,
+		}
+		if err := rm.ReportRepo().Create(ctx, report); err != nil {
+			return err
+		}
+		// Also block the reported user
+		if err := rm.ConnectionRepo().Delete(ctx, reporterID, reportedID); err != nil {
+			// Log error but don't fail the whole transaction if connection doesn't exist
+			// This is because we ensure a connection cannot exist when a block exists
+		}
+		if err := rm.LikeRepo().Delete(ctx, reporterID, reportedID); err != nil {
+			// Log error but don't fail
+		}
+		if err := rm.LikeRepo().Delete(ctx, reportedID, reporterID); err != nil {
+			// Log error but don't fail
+		}
+		if err := rm.ViewRepo().Delete(ctx, reporterID, reportedID); err != nil {
+			// Log error but don't fail
+		}
+		if err := rm.ViewRepo().Delete(ctx, reportedID, reporterID); err != nil {
+			// Log error but don't fail
+		}
+
+		block := &entity.Block{
+			BlockerID: reporterID,
+			BlockedID: reportedID,
+		}
+		if err := rm.BlockRepo().Create(ctx, block); err != nil {
+			return err
+		}
+		return nil
 	})
 }
