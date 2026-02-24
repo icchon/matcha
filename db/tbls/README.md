@@ -14,9 +14,10 @@
 | [public.user_tags](public.user_tags.md) | 2 |  | BASE TABLE |
 | [public.pictures](public.pictures.md) | 5 |  | BASE TABLE |
 | [public.likes](public.likes.md) | 3 |  | BASE TABLE |
-| [public.connections](public.connections.md) | 2 |  | BASE TABLE |
+| [public.connections](public.connections.md) | 3 |  | BASE TABLE |
 | [public.views](public.views.md) | 3 |  | BASE TABLE |
 | [public.blocks](public.blocks.md) | 2 |  | BASE TABLE |
+| [public.reports](public.reports.md) | 5 |  | BASE TABLE |
 | [public.notifications](public.notifications.md) | 6 |  | BASE TABLE |
 | [public.messages](public.messages.md) | 6 |  | BASE TABLE |
 | [public.refresh_tokens](public.refresh_tokens.md) | 5 |  | BASE TABLE |
