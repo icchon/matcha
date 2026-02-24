@@ -3,6 +3,7 @@ package profile
 import (
 	"context"
 	"database/sql"
+	"log"
 	"sort"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ type profileService struct {
 	pictureRepo  repo.PictureQueryRepository
 	viewRepo     repo.ViewQueryRepository
 	likeRepo     repo.LikeQueryRepository
+	blockRepo    repo.BlockQueryRepository
 	notifSvc     service.NotificationService
 	fileClient   client.FileClient
 	userTagRepo  repo.UserTagRepository
@@ -27,8 +29,8 @@ type profileService struct {
 
 var _ service.ProfileService = (*profileService)(nil)
 
-func NewProfileService(uow repo.UnitOfWork, profileRepo repo.UserProfileRepository, fileClient client.FileClient, pictureRepo repo.PictureQueryRepository, viewRepo repo.ViewQueryRepository, likeRepo repo.LikeQueryRepository, notifSvc service.NotificationService, userTagRepo repo.UserTagRepository, userDataRepo repo.UserDataRepository) *profileService {
-	return &profileService{uow: uow, profileRepo: profileRepo, fileClient: fileClient, pictureRepo: pictureRepo, viewRepo: viewRepo, likeRepo: likeRepo, notifSvc: notifSvc, userTagRepo: userTagRepo, userDataRepo: userDataRepo}
+func NewProfileService(uow repo.UnitOfWork, profileRepo repo.UserProfileRepository, fileClient client.FileClient, pictureRepo repo.PictureQueryRepository, viewRepo repo.ViewQueryRepository, likeRepo repo.LikeQueryRepository, blockRepo repo.BlockQueryRepository, notifSvc service.NotificationService, userTagRepo repo.UserTagRepository, userDataRepo repo.UserDataRepository) *profileService {
+	return &profileService{uow: uow, profileRepo: profileRepo, fileClient: fileClient, pictureRepo: pictureRepo, viewRepo: viewRepo, likeRepo: likeRepo, blockRepo: blockRepo, notifSvc: notifSvc, userTagRepo: userTagRepo, userDataRepo: userDataRepo}
 }
 
 func (s *profileService) CreateProfile(ctx context.Context, profile *entity.UserProfile) (*entity.UserProfile, error) {
@@ -95,6 +97,13 @@ func (s *profileService) FindProfile(ctx context.Context, userID uuid.UUID) (*en
 	if profile == nil {
 		return nil, apperrors.ErrNotFound
 	}
+	// Calculate fame rating
+	fameRating, err := s.calculateFameRating(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	profile.FameRating = sql.NullInt32{Int32: fameRating, Valid: true}
+
 	return profile, nil
 }
 
@@ -142,6 +151,17 @@ func (s *profileService) ListProfiles(ctx context.Context, selfUserID uuid.UUID,
 	})
 	if err != nil {
 		return nil, apperrors.ErrInternalServer
+	}
+
+	for _, profile := range profiles {
+		fameRating, err := s.calculateFameRating(ctx, profile.UserID)
+		if err != nil {
+			// Log the error but continue processing other profiles
+			log.Printf("Failed to calculate fame rating for user %s: %v", profile.UserID, err)
+			profile.FameRating = sql.NullInt32{Int32: 0, Valid: true} // Default or error value
+		} else {
+			profile.FameRating = sql.NullInt32{Int32: fameRating, Valid: true}
+		}
 	}
 	return profiles, nil
 }
@@ -237,4 +257,29 @@ func (s *profileService) calculateScore(selfTagMap map[int32]struct{}, candidate
 	}
 
 	return score
+}
+
+// calculateFameRating は、ユーザーのFame Ratingを計算します。
+// いいね数 + 閲覧数 - ブロック数の重み付けスコア
+func (s *profileService) calculateFameRating(ctx context.Context, userID uuid.UUID) (int32, error) {
+	likes, err := s.likeRepo.Query(ctx, &repo.LikeQuery{LikedID: &userID})
+	if err != nil {
+		return 0, err
+	}
+	views, err := s.viewRepo.Query(ctx, &repo.ViewQuery{ViewedID: &userID})
+	if err != nil {
+		return 0, err
+	}
+	blocks, err := s.blockRepo.Query(ctx, &repo.BlockQuery{BlockedID: &userID})
+	if err != nil {
+		return 0, err
+	}
+
+	// Simple weighting for now
+	fameRating := (len(likes) * 5) + (len(views) * 1) - (len(blocks) * 10)
+	if fameRating < 0 {
+		fameRating = 0
+	}
+
+	return int32(fameRating), nil
 }

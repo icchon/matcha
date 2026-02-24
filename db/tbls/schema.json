@@ -769,6 +769,12 @@
           "name": "user2_id",
           "type": "uuid",
           "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
         }
       ],
       "indexes": [
@@ -980,6 +986,98 @@
           "columns": [
             "blocker_id",
             "blocked_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.reports",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": "nextval('reports_id_seq'::regclass)"
+        },
+        {
+          "name": "reporter_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "reported_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "reports_pkey",
+          "def": "CREATE UNIQUE INDEX reports_pkey ON public.reports USING btree (id)",
+          "table": "public.reports",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "reports_check",
+          "type": "CHECK",
+          "def": "CHECK ((reporter_id \u003c\u003e reported_id))",
+          "table": "public.reports",
+          "referenced_table": "",
+          "columns": [
+            "reporter_id",
+            "reported_id"
+          ]
+        },
+        {
+          "name": "reports_reported_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (reported_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.reports",
+          "referenced_table": "users",
+          "columns": [
+            "reported_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "reports_reporter_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table": "public.reports",
+          "referenced_table": "users",
+          "columns": [
+            "reporter_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "reports_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.reports",
+          "referenced_table": "",
+          "columns": [
+            "id"
           ]
         }
       ]
@@ -1445,6 +1543,32 @@
       ],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.reports",
+      "columns": [
+        "reported_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (reported_id) REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.reports",
+      "columns": [
+        "reporter_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.users",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE"
     },
     {
       "table": "public.notifications",

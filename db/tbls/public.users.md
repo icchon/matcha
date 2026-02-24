@@ -6,7 +6,7 @@
 
 | Name | Type | Default | Nullable | Children | Parents | Comment |
 | ---- | ---- | ------- | -------- | -------- | ------- | ------- |
-| id | uuid | uuid_generate_v4() | false | [public.user_data](public.user_data.md) [public.auths](public.auths.md) [public.verification_tokens](public.verification_tokens.md) [public.password_resets](public.password_resets.md) [public.user_profiles](public.user_profiles.md) [public.user_tags](public.user_tags.md) [public.pictures](public.pictures.md) [public.likes](public.likes.md) [public.connections](public.connections.md) [public.views](public.views.md) [public.blocks](public.blocks.md) [public.notifications](public.notifications.md) [public.messages](public.messages.md) [public.refresh_tokens](public.refresh_tokens.md) |  |  |
+| id | uuid | uuid_generate_v4() | false | [public.user_data](public.user_data.md) [public.auths](public.auths.md) [public.verification_tokens](public.verification_tokens.md) [public.password_resets](public.password_resets.md) [public.user_profiles](public.user_profiles.md) [public.user_tags](public.user_tags.md) [public.pictures](public.pictures.md) [public.likes](public.likes.md) [public.connections](public.connections.md) [public.views](public.views.md) [public.blocks](public.blocks.md) [public.reports](public.reports.md) [public.notifications](public.notifications.md) [public.messages](public.messages.md) [public.refresh_tokens](public.refresh_tokens.md) |  |  |
 | created_at | timestamp with time zone | CURRENT_TIMESTAMP | true |  |  |  |
 | last_connection | timestamp with time zone |  | true |  |  |  |
 

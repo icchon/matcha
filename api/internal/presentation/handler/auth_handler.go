@@ -210,3 +210,28 @@ func (h *AuthHandler) GithubLoginHandler(w http.ResponseWriter, r *http.Request)
 	}
 	helper.RespondWithJSON(w, http.StatusOK, GoogleLoginResponse{AccessToken: access, RefreshToken: refresh, UserID: auth.UserID, IsVerified: auth.IsVerified, AuthMethod: string(auth.Provider)})
 }
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type RefreshResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+// /auth/refresh POST
+func (h *AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
+	var req RefreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	newAccessToken, err := h.authService.RefreshAccessToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, RefreshResponse{AccessToken: newAccessToken})
+}

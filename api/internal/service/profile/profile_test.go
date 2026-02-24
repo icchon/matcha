@@ -20,9 +20,10 @@ func TestProfileService_RecommendProfiles(t *testing.T) {
 	profileRepo := mock.NewMockUserProfileRepository(ctrl)
 	userDataRepo := mock.NewMockUserDataRepository(ctrl)
 	userTagRepo := mock.NewMockUserTagRepository(ctrl)
+	blockRepo := mock.NewMockBlockRepository(ctrl)
 	// other repos and services can be mocked as needed
 
-	profileSvc := NewProfileService(nil, profileRepo, nil, nil, nil, nil, nil, userTagRepo, userDataRepo)
+	profileSvc := NewProfileService(nil, profileRepo, nil, nil, nil, nil, blockRepo, nil, userTagRepo, userDataRepo)
 
 	selfUserID := uuid.New()
 	candidateUserID1 := uuid.New()

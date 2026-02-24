@@ -104,6 +104,21 @@ func (mr *MockAuthServiceMockRecorder) Logout(ctx, userID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockAuthService)(nil).Logout), ctx, userID)
 }
 
+// RefreshAccessToken mocks base method.
+func (m *MockAuthService) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshAccessToken", ctx, refreshToken)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RefreshAccessToken indicates an expected call of RefreshAccessToken.
+func (mr *MockAuthServiceMockRecorder) RefreshAccessToken(ctx, refreshToken any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshAccessToken", reflect.TypeOf((*MockAuthService)(nil).RefreshAccessToken), ctx, refreshToken)
+}
+
 // SendPasswordResetEmail mocks base method.
 func (m *MockAuthService) SendPasswordResetEmail(ctx context.Context, email string) error {
 	m.ctrl.T.Helper()

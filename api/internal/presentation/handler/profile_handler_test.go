@@ -117,7 +117,7 @@ func TestProfileHandler_DeleteProfilePictureHandler(t *testing.T) {
 				mockSvc.EXPECT().DeletePicture(gomock.Any(), int32(pictureID), userID).Return(nil)
 			},
 			ctx:            context.WithValue(context.Background(), middleware.UserIDContextKey, userID),
-			expectedStatus: http.StatusNoContent,
+			expectedStatus: http.StatusOK,
 			expectedBody:   `{"message":"Picture deleted successfully"}`,
 		},
 		{
@@ -258,3 +258,58 @@ func TestProfileHandler_UploadProfilePictureHandler(t *testing.T) {
 }
 
 //go:generate mockgen -destination=../../mock/profile_service.go -package=mock github.com/icchon/matcha/api/internal/domain/service ProfileService
+
+func TestProfileHandler_GetMyProfileHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockProfileService := mock.NewMockProfileService(ctrl)
+	handler := NewProfileHandler(mockProfileService)
+
+	userID := uuid.New()
+	profile := &entity.UserProfile{
+		UserID:   userID,
+		Username: sql.NullString{String: "testuser", Valid: true},
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		mockProfileService.EXPECT().FindProfile(gomock.Any(), userID).Return(profile, nil)
+
+		req := httptest.NewRequest(http.MethodGet, "/me/profile", nil)
+		ctx := context.WithValue(context.Background(), middleware.UserIDContextKey, userID)
+		req = req.WithContext(ctx)
+		rr := httptest.NewRecorder()
+
+		handler.GetMyProfileHandler(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+		var res entity.UserProfile
+		err := json.Unmarshal(rr.Body.Bytes(), &res)
+		assert.NoError(t, err)
+		assert.Equal(t, profile.UserID, res.UserID)
+		assert.Equal(t, profile.Username.String, res.Username.String)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/me/profile", nil)
+		// No user ID in context
+		rr := httptest.NewRecorder()
+
+		handler.GetMyProfileHandler(rr, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	})
+
+	t.Run("Profile not found", func(t *testing.T) {
+		mockProfileService.EXPECT().FindProfile(gomock.Any(), userID).Return(nil, apperrors.ErrNotFound)
+
+		req := httptest.NewRequest(http.MethodGet, "/me/profile", nil)
+		ctx := context.WithValue(context.Background(), middleware.UserIDContextKey, userID)
+		req = req.WithContext(ctx)
+		rr := httptest.NewRecorder()
+
+		handler.GetMyProfileHandler(rr, req)
+
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}

@@ -24,6 +24,39 @@ func NewUserHandler(userService service.UserService, profileService service.Prof
 	return &UserHandler{userService: userService, profileService: profileService}
 }
 
+type ReportUserRequest struct {
+	Reason string `json:"reason"`
+}
+
+// /users/{userID}/report POST
+func (h *UserHandler) ReportUserHandler(w http.ResponseWriter, r *http.Request) {
+	reporterID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+
+	reportedIDStr := chi.URLParam(r, string(helper.UserIDUrlParam))
+	reportedID, err := uuid.Parse(reportedIDStr)
+	if err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	var req ReportUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helper.HandleError(w, apperrors.ErrInvalidInput)
+		return
+	}
+
+	if err := h.userService.ReportUser(r.Context(), reporterID, reportedID, req.Reason); err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User reported successfully"})
+}
+
 type LikeUserResponse struct {
 	Connection *entity.Connection `json:"connection"`
 	Message    string             `json:"message"`

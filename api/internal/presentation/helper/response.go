@@ -20,6 +20,10 @@ func RespondWithError(w http.ResponseWriter, code int, message string) {
 }
 
 func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	if code == http.StatusNoContent {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	if payload == nil {
 		payload = map[string]interface{}{}
 	}

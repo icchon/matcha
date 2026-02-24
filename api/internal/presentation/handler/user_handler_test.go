@@ -212,7 +212,7 @@ func TestUserHandler_UpdateMyUserDataHandler(t *testing.T) {
 		{
 			name:           "Unauthorized",
 			setupMocks:     func(mockUserService *mock.MockUserService) {},
-			ctx:            context.Background(), // No user ID in context
+			ctx:            context.Background(), // Corrected: No user ID in context
 			body:           `{"latitude": 35.6895, "longitude": 139.6917}`,
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   `{"message":"Authentication failed."}`,
@@ -239,6 +239,105 @@ func TestUserHandler_UpdateMyUserDataHandler(t *testing.T) {
 
 			assert.Equal(t, tc.expectedStatus, rr.Code)
 			// With the json tags added to the UserData struct, we should be able to use JSONEq directly
+			assert.JSONEq(t, tc.expectedBody, rr.Body.String())
+		})
+	}
+}
+
+func TestUserHandler_ReportUserHandler(t *testing.T) {
+	reporterID := uuid.New()
+	reportedID := uuid.New()
+	reason := "Fake account"
+
+	testCases := []struct {
+		name           string
+		setupMocks     func(mockUserService *mock.MockUserService)
+		reportedID     string
+		reason         string
+		body           string // New field for raw request body
+		ctx            context.Context
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name: "Success",
+			setupMocks: func(mockUserService *mock.MockUserService) {
+				mockUserService.EXPECT().ReportUser(gomock.Any(), reporterID, reportedID, reason).Return(nil)
+			},
+			reportedID:     reportedID.String(),
+			reason:         reason,
+			body:           `{"reason":"` + reason + `"}`, // Valid JSON body
+			ctx:            context.WithValue(context.Background(), middleware.UserIDContextKey, reporterID),
+			expectedStatus: http.StatusOK,
+			expectedBody:   `{"message":"User reported successfully"}`,
+		},
+		{
+			name:           "Invalid ReportedID",
+			setupMocks:     func(mockUserService *mock.MockUserService) {},
+			reportedID:     "invalid-uuid",
+			reason:         reason,
+			body:           `{"reason":"` + reason + `"}`, // Valid JSON body, but invalid ID in URL
+			ctx:            context.WithValue(context.Background(), middleware.UserIDContextKey, reporterID),
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"message":"Invalid input provided."}`,
+		},
+		{
+			name: "Service Error",
+			setupMocks: func(mockUserService *mock.MockUserService) {
+				mockUserService.EXPECT().ReportUser(gomock.Any(), reporterID, reportedID, reason).Return(apperrors.ErrInternalServer)
+			},
+			reportedID:     reportedID.String(),
+			reason:         reason,
+			body:           `{"reason":"` + reason + `"}`, // Valid JSON body
+			ctx:            context.WithValue(context.Background(), middleware.UserIDContextKey, reporterID),
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"message":"Internal server error."}`,
+		},
+		{
+			name:           "Unauthorized - No ReporterID in Context",
+			setupMocks:     func(mockUserService *mock.MockUserService) {},
+			reportedID:     reportedID.String(),
+			reason:         reason,
+			body:           `{"reason":"` + reason + `"}`, // Valid JSON body
+			ctx:            context.Background(),          // Corrected: No user ID in context
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"message":"Authentication failed."}`,
+		},
+		{
+			name:           "Invalid JSON",
+			setupMocks:     func(mockUserService *mock.MockUserService) {},
+			reportedID:     reportedID.String(),
+			reason:         "",                         // Not used for body, but still needs a value in struct
+			body:           `{"reason": "some reason"`, // Malformed request body
+			ctx:            context.WithValue(context.Background(), middleware.UserIDContextKey, reporterID),
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"message":"Invalid input provided."}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUserService := mock.NewMockUserService(ctrl)
+			mockProfileService := mock.NewMockProfileService(ctrl) // Dummy for NewUserHandler
+			tc.setupMocks(mockUserService)
+
+			handler := NewUserHandler(mockUserService, mockProfileService)
+
+			// Use tc.body directly
+			req := httptest.NewRequest(http.MethodPost, "/users/"+tc.reportedID+"/report", bytes.NewBufferString(tc.body))
+
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("userID", tc.reportedID)
+			req = req.WithContext(context.WithValue(tc.ctx, chi.RouteCtxKey, rctx))
+			req.Header.Set("Content-Type", "application/json")
+
+			rr := httptest.NewRecorder()
+			handler.ReportUserHandler(rr, req)
+
+			assert.Equal(t, tc.expectedStatus, rr.Code)
 			assert.JSONEq(t, tc.expectedBody, rr.Body.String())
 		})
 	}

@@ -232,6 +232,20 @@ func (mr *MockUserServiceMockRecorder) LikeUser(ctx, likerID, likedID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LikeUser", reflect.TypeOf((*MockUserService)(nil).LikeUser), ctx, likerID, likedID)
 }
 
+// ReportUser mocks base method.
+func (m *MockUserService) ReportUser(ctx context.Context, reporterID, reportedID uuid.UUID, reason string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReportUser", ctx, reporterID, reportedID, reason)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReportUser indicates an expected call of ReportUser.
+func (mr *MockUserServiceMockRecorder) ReportUser(ctx, reporterID, reportedID, reason any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportUser", reflect.TypeOf((*MockUserService)(nil).ReportUser), ctx, reporterID, reportedID, reason)
+}
+
 // UnblockUser mocks base method.
 func (m *MockUserService) UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error {
 	m.ctrl.T.Helper()

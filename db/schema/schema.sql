@@ -136,6 +136,15 @@ CREATE TABLE blocks (
     CHECK (blocker_id <> blocked_id)
 );
 
+CREATE TABLE reports (
+    id BIGSERIAL PRIMARY KEY,
+    reporter_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    reported_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CHECK (reporter_id <> reported_id)
+);
+
 CREATE TYPE notification_type_enum AS ENUM ('like', 'view', 'match', 'unlike', 'message');
 
 CREATE TABLE notifications (

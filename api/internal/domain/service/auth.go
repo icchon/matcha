@@ -15,4 +15,5 @@ type AuthService interface {
 	ConfirmPassword(ctx context.Context, token string, password string) error
 	SendPasswordResetEmail(ctx context.Context, email string) error
 	LoginOAuth(ctx context.Context, code string, codeVerifier string, provider entity.AuthProvider) (a *entity.Auth, access string, refresh string, e error)
+	RefreshAccessToken(ctx context.Context, refreshToken string) (string, error)
 }

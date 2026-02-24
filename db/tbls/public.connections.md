@@ -8,6 +8,7 @@
 | ---- | ---- | ------- | -------- | -------- | ------- | ------- |
 | user1_id | uuid |  | false |  | [public.users](public.users.md) |  |
 | user2_id | uuid |  | false |  | [public.users](public.users.md) |  |
+| created_at | timestamp with time zone | CURRENT_TIMESTAMP | true |  |  |  |
 
 ## Constraints
 

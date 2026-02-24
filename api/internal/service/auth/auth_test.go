@@ -166,3 +166,84 @@ func TestAuthService_Logout(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthService_RefreshAccessToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuthRepo := mock.NewMockAuthQueryRepository(ctrl)
+	mockRefreshTokenQueryRepo := mock.NewMockRefreshTokenQueryRepository(ctrl)
+	mockUserQueryRepo := mock.NewMockUserQueryRepository(ctrl)
+	mockPasswordResetQueryRepo := mock.NewMockPasswordResetQueryRepository(ctrl)
+	mockVerificationTokenQueryRepo := mock.NewMockVerificationTokenQueryRepository(ctrl)
+	mockMailService := mock.NewMockMailService(ctrl)
+	mockGoogleClient := mock.NewMockOAuthClient(ctrl)
+	mockGithubClient := mock.NewMockOAuthClient(ctrl)
+	mockUOW := &mockAuthUOW{}
+
+	service := NewAuthService(
+		mockUOW,
+		mockAuthRepo,
+		mockUserQueryRepo,
+		mockRefreshTokenQueryRepo,
+		mockPasswordResetQueryRepo,
+		mockVerificationTokenQueryRepo,
+		mockGoogleClient,
+		mockGithubClient,
+		mockMailService,
+		"dummy_hmac_key",
+		"dummy_jwt_key",
+	)
+
+	refreshTokenString := "valid-refresh-token"
+	userID := uuid.New()
+	tokenHash := HashTokenWithHMAC(refreshTokenString, "dummy_hmac_key")
+
+	refreshToken := &entity.RefreshToken{
+		UserID:    userID,
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().Add(time.Hour),
+		Revoked:   false,
+	}
+
+	auth := &entity.Auth{
+		UserID:     userID,
+		IsVerified: true,
+		Provider:   entity.ProviderGoogle,
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		mockRefreshTokenQueryRepo.EXPECT().Find(gomock.Any(), tokenHash).Return(refreshToken, nil)
+		mockAuthRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return([]*entity.Auth{auth}, nil)
+
+		newAccessToken, err := service.RefreshAccessToken(context.Background(), refreshTokenString)
+
+		assert.NoError(t, err)
+		assert.NotEmpty(t, newAccessToken)
+	})
+
+	t.Run("Failure - Invalid Token", func(t *testing.T) {
+		mockRefreshTokenQueryRepo.EXPECT().Find(gomock.Any(), gomock.Any()).Return(nil, nil)
+		_, err := service.RefreshAccessToken(context.Background(), "invalid-token")
+		assert.Error(t, err)
+		assert.Equal(t, apperrors.ErrUnauthorized, err)
+	})
+
+	t.Run("Failure - Auth repo query fails", func(t *testing.T) {
+		mockRefreshTokenQueryRepo.EXPECT().Find(gomock.Any(), tokenHash).Return(refreshToken, nil)
+		mockAuthRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
+
+		_, err := service.RefreshAccessToken(context.Background(), refreshTokenString)
+		assert.Error(t, err)
+		assert.Equal(t, apperrors.ErrInternalServer, err)
+	})
+
+	t.Run("Failure - User not found", func(t *testing.T) {
+		mockRefreshTokenQueryRepo.EXPECT().Find(gomock.Any(), tokenHash).Return(refreshToken, nil)
+		mockAuthRepo.EXPECT().Query(gomock.Any(), gomock.Any()).Return([]*entity.Auth{}, nil)
+
+		_, err := service.RefreshAccessToken(context.Background(), refreshTokenString)
+		assert.Error(t, err)
+		assert.Equal(t, apperrors.ErrNotFound, err)
+	})
+}

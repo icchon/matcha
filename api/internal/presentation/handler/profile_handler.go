@@ -228,7 +228,7 @@ func (h *ProfileHandler) DeleteProfilePictureHandler(w http.ResponseWriter, r *h
 		helper.HandleError(w, err)
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusNoContent, map[string]string{"message": "Picture deleted successfully"})
+	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Picture deleted successfully"})
 }
 
 type GetWhoLikedMeListResponse struct {
@@ -383,4 +383,25 @@ func (h *ProfileHandler) RecommendProfilesHandler(w http.ResponseWriter, r *http
 
 	helper.RespondWithJSON(w, http.StatusOK, profiles)
 
+}
+
+// GetMyProfileHandler handles GET /me/profile
+func (h *ProfileHandler) GetMyProfileHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(uuid.UUID)
+	if !ok {
+		helper.HandleError(w, apperrors.ErrUnauthorized)
+		return
+	}
+
+	profile, err := h.profileSvc.FindProfile(r.Context(), userID)
+	if err != nil {
+		helper.HandleError(w, err)
+		return
+	}
+	if profile == nil {
+		helper.HandleError(w, apperrors.ErrNotFound)
+		return
+	}
+
+	helper.RespondWithJSON(w, http.StatusOK, profile)
 }
