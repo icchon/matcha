@@ -71,3 +71,31 @@ func (mr *MockNotificationServiceMockRecorder) GetNotifications(ctx, recipientID
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNotifications", reflect.TypeOf((*MockNotificationService)(nil).GetNotifications), ctx, recipientID)
 }
+
+// MarkAllNotificationsAsRead mocks base method.
+func (m *MockNotificationService) MarkAllNotificationsAsRead(ctx context.Context, recipientID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAllNotificationsAsRead", ctx, recipientID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkAllNotificationsAsRead indicates an expected call of MarkAllNotificationsAsRead.
+func (mr *MockNotificationServiceMockRecorder) MarkAllNotificationsAsRead(ctx, recipientID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAllNotificationsAsRead", reflect.TypeOf((*MockNotificationService)(nil).MarkAllNotificationsAsRead), ctx, recipientID)
+}
+
+// MarkNotificationAsRead mocks base method.
+func (m *MockNotificationService) MarkNotificationAsRead(ctx context.Context, notificationID int64, recipientID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkNotificationAsRead", ctx, notificationID, recipientID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkNotificationAsRead indicates an expected call of MarkNotificationAsRead.
+func (mr *MockNotificationServiceMockRecorder) MarkNotificationAsRead(ctx, notificationID, recipientID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkNotificationAsRead", reflect.TypeOf((*MockNotificationService)(nil).MarkNotificationAsRead), ctx, notificationID, recipientID)
+}
