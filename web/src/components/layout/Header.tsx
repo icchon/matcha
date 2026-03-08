@@ -15,7 +15,7 @@ export function Header() {
             <>
               <Link to="/browse">Browse</Link>
               <Link to="/chat">Chat</Link>
-              <Link to="/profile/edit">Profile</Link>
+              <Link to="/profile">Profile</Link>
               <button type="button" onClick={logout}>
                 Logout
               </button>

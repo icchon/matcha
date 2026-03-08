@@ -148,8 +148,8 @@ describe('Header', () => {
       ).toBeInTheDocument();
       expect(
         profileLink.getAttribute('href'),
-        'Profile link should navigate to "/profile/edit".',
-      ).toBe('/profile/edit');
+        'Profile link should navigate to "/profile".',
+      ).toBe('/profile');
     });
 
     it('does NOT show Login or Sign Up links', () => {
