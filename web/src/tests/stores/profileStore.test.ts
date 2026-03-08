@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useProfileStore } from '@/stores/profileStore';
 import * as profileApi from '@/api/profile';
+import { ApiClientError } from '@/api/client';
 import type { UserProfile } from '@/types';
 
 vi.mock('@/api/profile');
@@ -52,11 +53,15 @@ describe('profileStore initial state', () => {
 });
 
 describe('fetchProfile', () => {
-  it('fetches profile and updates state', async () => {
+  it('fetches profile, updates state, and returns true', async () => {
     mockGetMyProfile.mockResolvedValue(sampleProfile);
 
-    await useProfileStore.getState().fetchProfile();
+    const result = await useProfileStore.getState().fetchProfile();
 
+    expect(
+      result,
+      'fetchProfile should return true when a profile is found.',
+    ).toBe(true);
     const state = useProfileStore.getState();
     expect(
       state.profile?.userId,
@@ -72,11 +77,15 @@ describe('fetchProfile', () => {
     ).toBeNull();
   });
 
-  it('sets error on failure', async () => {
+  it('sets error on failure and returns false', async () => {
     mockGetMyProfile.mockRejectedValue(new Error('Network error'));
 
-    await useProfileStore.getState().fetchProfile();
+    const result = await useProfileStore.getState().fetchProfile();
 
+    expect(
+      result,
+      'fetchProfile should return false on non-404/405 errors.',
+    ).toBe(false);
     const state = useProfileStore.getState();
     expect(
       state.profile,
@@ -104,13 +113,51 @@ describe('fetchProfile', () => {
       '5xx errors should show generic fallback, not raw server message. Check toUserFacingMessage.',
     ).toBe('Failed to fetch profile');
   });
+
+  it('treats 404 as "no profile yet" (profile=null, error=null)', async () => {
+    mockGetMyProfile.mockRejectedValue(
+      new ApiClientError(404, { error: 'Not Found' }),
+    );
+
+    await useProfileStore.getState().fetchProfile();
+
+    const state = useProfileStore.getState();
+    expect(
+      state.profile,
+      '404 should result in profile=null (no profile exists yet).',
+    ).toBeNull();
+    expect(
+      state.error,
+      '404 should NOT set an error — it simply means the profile has not been created.',
+    ).toBeNull();
+    expect(state.isLoading, 'isLoading should be false after 404.').toBe(false);
+  });
+
+  it('treats 405 as "no profile yet" (BE endpoint not implemented)', async () => {
+    mockGetMyProfile.mockRejectedValue(
+      new ApiClientError(405, { error: 'Method Not Allowed' }),
+    );
+
+    await useProfileStore.getState().fetchProfile();
+
+    const state = useProfileStore.getState();
+    expect(
+      state.profile,
+      '405 should result in profile=null (BE GET not implemented yet).',
+    ).toBeNull();
+    expect(
+      state.error,
+      '405 should NOT set an error — it is a temporary BE limitation.',
+    ).toBeNull();
+    expect(state.isLoading, 'isLoading should be false after 405.').toBe(false);
+  });
 });
 
 describe('createProfile', () => {
-  it('creates a new profile', async () => {
+  it('creates a new profile and returns true', async () => {
     mockCreateProfile.mockResolvedValue(sampleProfile);
 
-    await useProfileStore.getState().createProfile({
+    const result = await useProfileStore.getState().createProfile({
       firstName: 'John',
       lastName: 'Doe',
       username: 'johndoe',
@@ -120,6 +167,10 @@ describe('createProfile', () => {
       biography: 'Hello world',
     });
 
+    expect(
+      result,
+      'createProfile should return true on success so the caller can show a toast.',
+    ).toBe(true);
     const state = useProfileStore.getState();
     expect(
       mockCreateProfile,
@@ -131,10 +182,10 @@ describe('createProfile', () => {
     ).toBe('John');
   });
 
-  it('sets error on create failure', async () => {
+  it('sets error on create failure and returns false', async () => {
     mockCreateProfile.mockRejectedValue(new Error('Create failed'));
 
-    await useProfileStore.getState().createProfile({
+    const result = await useProfileStore.getState().createProfile({
       firstName: 'John',
       lastName: 'Doe',
       username: 'johndoe',
@@ -144,6 +195,10 @@ describe('createProfile', () => {
       biography: 'Hello world',
     });
 
+    expect(
+      result,
+      'createProfile should return false on failure.',
+    ).toBe(false);
     const state = useProfileStore.getState();
     expect(
       state.error,
@@ -153,12 +208,16 @@ describe('createProfile', () => {
 });
 
 describe('updateProfile', () => {
-  it('updates an existing profile', async () => {
+  it('updates an existing profile and returns true', async () => {
     const updatedProfile = { ...sampleProfile, biography: 'Updated bio' };
     mockUpdateProfile.mockResolvedValue(updatedProfile);
 
-    await useProfileStore.getState().updateProfile({ biography: 'Updated bio' });
+    const result = await useProfileStore.getState().updateProfile({ biography: 'Updated bio' });
 
+    expect(
+      result,
+      'updateProfile should return true on success so the caller can show a toast.',
+    ).toBe(true);
     const state = useProfileStore.getState();
     expect(
       mockUpdateProfile,
@@ -170,11 +229,15 @@ describe('updateProfile', () => {
     ).toBe('Updated bio');
   });
 
-  it('sets error on update failure', async () => {
+  it('sets error on update failure and returns false', async () => {
     mockUpdateProfile.mockRejectedValue(new Error('Save failed'));
 
-    await useProfileStore.getState().updateProfile({ biography: 'New bio' });
+    const result = await useProfileStore.getState().updateProfile({ biography: 'New bio' });
 
+    expect(
+      result,
+      'updateProfile should return false on failure.',
+    ).toBe(false);
     const state = useProfileStore.getState();
     expect(
       state.error,

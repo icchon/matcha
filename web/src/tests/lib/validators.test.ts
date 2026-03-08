@@ -244,8 +244,7 @@ describe('profileSchema', () => {
 
   describe('occupation', () => {
     it('accepts when occupation is omitted', () => {
-      const { occupation: _, ...withoutOccupation } = validProfile;
-      const result = profileSchema.safeParse(withoutOccupation);
+      const result = profileSchema.safeParse(validProfile);
       expect(result.success, 'Occupation is optional and should pass when omitted.').toBe(true);
     });
 

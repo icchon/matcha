@@ -1,4 +1,5 @@
 import { useEffect, type FC } from 'react';
+import { toast } from 'sonner';
 import { useProfileStore } from '@/stores/profileStore';
 import { usePictureStore } from '@/stores/pictureStore';
 import { useTagStore } from '@/stores/tagStore';
@@ -8,12 +9,13 @@ import { TagManager } from '@/features/profile/components/TagManager';
 import { Spinner } from '@/components/ui/Spinner';
 import type { ProfileFormData } from '@/lib/validators';
 
-const EditProfilePage: FC = () => {
+const ProfilePage: FC = () => {
   const profile = useProfileStore((s) => s.profile);
-  const isProfileLoading = useProfileStore((s) => s.isLoading);
-  const profileError = useProfileStore((s) => s.error);
-  const updateProfile = useProfileStore((s) => s.updateProfile);
+  const isLoading = useProfileStore((s) => s.isLoading);
+  const error = useProfileStore((s) => s.error);
   const fetchProfile = useProfileStore((s) => s.fetchProfile);
+  const createProfile = useProfileStore((s) => s.createProfile);
+  const updateProfile = useProfileStore((s) => s.updateProfile);
 
   const pictures = usePictureStore((s) => s.pictures);
   const isPicturesLoading = usePictureStore((s) => s.isLoading);
@@ -34,8 +36,14 @@ const EditProfilePage: FC = () => {
     fetchTags();
   }, [fetchProfile, fetchTags]);
 
-  const handleSubmit = (data: ProfileFormData) => {
-    updateProfile({
+  const isNewProfile = !isLoading && profile === null && error === null;
+
+  const handleSubmit = async (data: ProfileFormData) => {
+    // Read current profile at call time to avoid stale closure if user double-submits
+    const currentProfile = useProfileStore.getState().profile;
+    const isCreate = currentProfile === null;
+
+    const params = {
       firstName: data.firstName,
       lastName: data.lastName,
       username: data.username,
@@ -44,12 +52,18 @@ const EditProfilePage: FC = () => {
       birthday: data.birthday,
       biography: data.biography,
       occupation: data.occupation || undefined,
-    });
+    };
+
+    const success = isCreate
+      ? await createProfile(params)
+      : await updateProfile(params);
+
+    if (success) {
+      toast.success(isCreate ? 'Profile created!' : 'Profile updated!');
+    }
   };
 
-  const errors = [profileError, pictureError, tagError].filter(Boolean);
-
-  if (isProfileLoading && !profile) {
+  if (isLoading && !profile && !error) {
     return (
       <div className="flex items-center justify-center p-12">
         <Spinner size="lg" />
@@ -57,15 +71,34 @@ const EditProfilePage: FC = () => {
     );
   }
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-8 p-6">
-      <h1 className="text-2xl font-bold text-gray-900">Edit Profile</h1>
-
-      {errors.length > 0 ? (
+  if (error) {
+    const errors = [error, pictureError, tagError].filter(Boolean);
+    return (
+      <div className="mx-auto max-w-2xl space-y-8 p-6">
         <div role="alert" className="rounded-md bg-red-50 p-4 text-sm text-red-700">
           {errors.length === 1 ? errors[0] : (
             <ul className="list-disc pl-4">
-              {errors.map((e) => <li key={e}>{e}</li>)}
+              {errors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const nonProfileErrors = [pictureError, tagError].filter(Boolean);
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-8 p-6">
+      <h1 className="text-2xl font-bold text-gray-900">
+        {isNewProfile ? 'Create Profile' : 'Edit Profile'}
+      </h1>
+
+      {nonProfileErrors.length > 0 ? (
+        <div role="alert" className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+          {nonProfileErrors.length === 1 ? nonProfileErrors[0] : (
+            <ul className="list-disc pl-4">
+              {nonProfileErrors.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
           )}
         </div>
@@ -73,7 +106,7 @@ const EditProfilePage: FC = () => {
 
       <ProfileForm
         onSubmit={handleSubmit}
-        isLoading={isProfileLoading}
+        isLoading={isLoading}
         initialValues={profile ? {
           firstName: profile.firstName ?? undefined,
           lastName: profile.lastName ?? undefined,
@@ -104,4 +137,4 @@ const EditProfilePage: FC = () => {
   );
 };
 
-export { EditProfilePage };
+export { ProfilePage };

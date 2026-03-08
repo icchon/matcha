@@ -11,8 +11,7 @@ import {
   ForgotPasswordPage,
   ResetPasswordPage,
 } from '@/features/auth/pages';
-import { ProfileCreatePage } from '@/features/profile/pages/ProfileCreatePage';
-import { EditProfilePage } from '@/features/profile/pages/EditProfilePage';
+import { ProfilePage } from '@/features/profile/pages/ProfilePage';
 
 // Placeholder page components - will be replaced in later phases
 function HomePage() {
@@ -79,8 +78,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/search" element={<SearchPage />} />
-            <Route path="/profile/create" element={<ProfileCreatePage />} />
-            <Route path="/profile/edit" element={<EditProfilePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/users/:userId" element={<UserProfilePage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/likes" element={<LikesPage />} />

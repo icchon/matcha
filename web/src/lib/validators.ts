@@ -48,8 +48,8 @@ export const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50, 'First name must be 50 characters or less'),
   lastName: z.string().min(1, 'Last name is required').max(50, 'Last name must be 50 characters or less'),
   username: z.string().min(3, 'Username must be at least 3 characters').max(30, 'Username must be 30 characters or less').regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens'),
-  gender: z.enum(['male', 'female', 'other'], { required_error: 'Gender is required' }),
-  sexualPreference: z.enum(['heterosexual', 'homosexual', 'bisexual'], { required_error: 'Sexual preference is required' }),
+  gender: z.enum(['male', 'female', 'other'], { error: 'Gender is required' }),
+  sexualPreference: z.enum(['heterosexual', 'homosexual', 'bisexual'], { error: 'Sexual preference is required' }),
   birthday: z.string().min(1, 'Birthday is required').refine((val) => {
     const birth = new Date(val);
     if (isNaN(birth.getTime())) return false;
